@@ -1,27 +1,27 @@
 import re
 
-SUPPORTED_SKILLS = {
-    "aws",
-    "docker",
-    "fastapi",
-    "firebase",
-    "git",
-    "github actions",
-    "javascript",
-    "kubernetes",
-    "mongodb",
-    "next.js",
-    "node.js",
-    "playwright",
-    "postgresql",
-    "python",
-    "react",
-    "redis",
-    "rest api",
-    "sql",
-    "supabase",
-    "typescript",
-    "vitest",
+SKILL_ALIASES = {
+    "aws": {"aws", "amazon web services"},
+    "docker": {"docker"},
+    "fastapi": {"fastapi", "fast api"},
+    "firebase": {"firebase"},
+    "git": {"git"},
+    "github actions": {"github actions", "github action"},
+    "javascript": {"javascript", "js"},
+    "kubernetes": {"kubernetes", "k8s"},
+    "mongodb": {"mongodb", "mongo db"},
+    "next.js": {"next.js", "nextjs", "next js"},
+    "node.js": {"node.js", "nodejs", "node js"},
+    "playwright": {"playwright"},
+    "postgresql": {"postgresql", "postgres", "postgre sql"},
+    "python": {"python"},
+    "react": {"react", "react.js", "reactjs"},
+    "redis": {"redis"},
+    "rest api": {"rest api", "rest APIs", "restful api", "restful APIs"},
+    "sql": {"sql"},
+    "supabase": {"supabase"},
+    "typescript": {"typescript", "ts"},
+    "vitest": {"vitest"},
 }
 
 
@@ -29,8 +29,8 @@ def normalize_text(text: str) -> str:
     return re.sub(r"\s+", " ", text.lower()).strip()
 
 
-def contains_skill(text: str, skill: str) -> bool:
-    pattern = rf"(?<!\w){re.escape(skill)}(?!\w)"
+def contains_skill(text: str, alias: str) -> bool:
+    pattern = rf"(?<!\w){re.escape(alias.lower())}(?!\w)"
     return re.search(pattern, text) is not None
 
 
@@ -38,7 +38,9 @@ def extract_skills(text: str) -> set[str]:
     normalized_text = normalize_text(text)
 
     return {
-        skill for skill in SUPPORTED_SKILLS if contains_skill(normalized_text, skill)
+        canonical_name
+        for canonical_name, aliases in SKILL_ALIASES.items()
+        if any(contains_skill(normalized_text, alias) for alias in aliases)
     }
 
 

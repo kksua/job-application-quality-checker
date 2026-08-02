@@ -19,6 +19,8 @@ def test_analysis_endpoint_returns_skill_analysis() -> None:
     assert response.json() == {
         "matching_skills": ["postgresql", "python"],
         "missing_skills": ["docker", "fastapi"],
+        "vague_phrases": [],
+        "repeated_words": {},
         "match_score": 50,
     }
 
@@ -33,3 +35,28 @@ def test_analysis_endpoint_rejects_short_cv_text() -> None:
     )
 
     assert response.status_code == 422
+
+
+def test_analysis_endpoint_detects_text_quality_problems() -> None:
+    response = client.post(
+        "/analysis",
+        json={
+            "cv_text": (
+                "I am a hard-working team player. I worked on Python "
+                "projects. Python was used for automation. Python helped "
+                "with various tasks."
+            ),
+            "job_description": (
+                "We need a Python developer with automation experience."
+            ),
+        },
+    )
+
+    assert response.status_code == 200
+
+    result = response.json()
+
+    assert "hard-working" in result["vague_phrases"]
+    assert "team player" in result["vague_phrases"]
+    assert "various tasks" in result["vague_phrases"]
+    assert result["repeated_words"]["python"] == 3
