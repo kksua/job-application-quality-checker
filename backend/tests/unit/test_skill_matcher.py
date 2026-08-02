@@ -58,3 +58,26 @@ def test_analyse_skill_match_returns_matching_and_missing_skills() -> None:
     assert matching == ["postgresql", "python"]
     assert missing == ["docker", "fastapi"]
     assert score == 50
+
+
+def test_extract_skills_supports_aliases() -> None:
+    text = (
+        "Built REST APIs with NodeJS, Postgres, ReactJS, Amazon Web Services and K8s."
+    )
+
+    result = extract_skills(text)
+
+    assert result == {
+        "aws",
+        "kubernetes",
+        "node.js",
+        "postgresql",
+        "react",
+        "rest api",
+    }
+
+
+def test_rest_api_plural_matches_canonical_skill() -> None:
+    result = extract_skills("Developed several REST APIs for internal tools.")
+
+    assert result == {"rest api"}

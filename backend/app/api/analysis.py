@@ -2,6 +2,10 @@ from fastapi import APIRouter
 
 from app.schemas.analysis import AnalysisRequest, AnalysisResponse
 from app.services.skill_matcher import analyse_skill_match
+from app.services.text_quality_analyser import (
+    find_repeated_words,
+    find_vague_phrases,
+)
 
 router = APIRouter(
     prefix="/analysis",
@@ -15,9 +19,13 @@ def analyse_application(request: AnalysisRequest) -> AnalysisResponse:
         cv_text=request.cv_text,
         job_description=request.job_description,
     )
+    vague_phrases = find_vague_phrases(request.cv_text)
+    repeated_words = find_repeated_words(request.cv_text)
 
     return AnalysisResponse(
         matching_skills=matching_skills,
         missing_skills=missing_skills,
+        vague_phrases=vague_phrases,
+        repeated_words=repeated_words,
         match_score=match_score,
     )

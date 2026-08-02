@@ -15,4 +15,6 @@ class AnalysisRequest(BaseModel):
 class AnalysisResponse(BaseModel):
     matching_skills: list[str]
     missing_skills: list[str]
+    vague_phrases: list[str]
+    repeated_words: dict[str, int]
     match_score: int
