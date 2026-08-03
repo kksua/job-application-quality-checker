@@ -12,9 +12,15 @@ class AnalysisRequest(BaseModel):
     )
 
 
+class BulletIssueResponse(BaseModel):
+    bullet: str
+    issues: list[str]
+
+
 class AnalysisResponse(BaseModel):
     matching_skills: list[str]
     missing_skills: list[str]
     vague_phrases: list[str]
     repeated_words: dict[str, int]
+    bullet_issues: list[BulletIssueResponse]
     match_score: int
