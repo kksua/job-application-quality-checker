@@ -21,6 +21,7 @@ def test_analysis_endpoint_returns_skill_analysis() -> None:
         "missing_skills": ["docker", "fastapi"],
         "vague_phrases": [],
         "repeated_words": {},
+        "bullet_issues": [],
         "match_score": 50,
     }
 
@@ -60,3 +61,27 @@ def test_analysis_endpoint_detects_text_quality_problems() -> None:
     assert "team player" in result["vague_phrases"]
     assert "various tasks" in result["vague_phrases"]
     assert result["repeated_words"]["python"] == 3
+
+
+def test_analysis_endpoint_returns_bullet_issues() -> None:
+    response = client.post(
+        "/analysis",
+        json={
+            "cv_text": (
+                "- Reduced manual review time by 60% using FastAPI.\n"
+                "- Worked on projects.\n"
+                "- Responsible for various tasks."
+            ),
+            "job_description": (
+                "We need a Python and FastAPI developer with testing experience."
+            ),
+        },
+    )
+
+    assert response.status_code == 200
+
+    result = response.json()
+
+    assert len(result["bullet_issues"]) == 2
+    assert result["bullet_issues"][0]["bullet"] == "Worked on projects."
+    assert result["bullet_issues"][1]["bullet"] == "Responsible for various tasks."
