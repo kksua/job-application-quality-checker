@@ -16,14 +16,19 @@ def test_analysis_endpoint_returns_skill_analysis() -> None:
     )
 
     assert response.status_code == 200
-    assert response.json() == {
-        "matching_skills": ["postgresql", "python"],
-        "missing_skills": ["docker", "fastapi"],
-        "vague_phrases": [],
-        "repeated_words": {},
-        "bullet_issues": [],
-        "match_score": 50,
-    }
+
+    result = response.json()
+
+    assert result["matching_skills"] == ["postgresql", "python"]
+    assert result["missing_skills"] == ["docker", "fastapi"]
+    assert result["vague_phrases"] == []
+    assert result["repeated_words"] == {}
+    assert result["bullet_issues"] == []
+    assert result["match_score"] == 50
+
+    assert "ats_readiness_score" in result
+    assert "ats_issues" in result
+    assert "ats_passed_checks" in result
 
 
 def test_analysis_endpoint_rejects_short_cv_text() -> None:
@@ -85,3 +90,35 @@ def test_analysis_endpoint_returns_bullet_issues() -> None:
     assert len(result["bullet_issues"]) == 2
     assert result["bullet_issues"][0]["bullet"] == "Worked on projects."
     assert result["bullet_issues"][1]["bullet"] == "Responsible for various tasks."
+
+
+def test_analysis_endpoint_returns_ats_readiness_results() -> None:
+    response = client.post(
+        "/analysis",
+        json={
+            "cv_text": (
+                "Supipi Amarajeeva\n"
+                "supipi@example.com\n"
+                "+33 6 12 34 56 78\n\n"
+                "Experience\n"
+                "- Developed a FastAPI application.\n\n"
+                "Education\n"
+                "- Engineering degree.\n\n"
+                "Skills\n"
+                "- Python, React, PostgreSQL."
+            ),
+            "job_description": ("We need a Python developer with FastAPI experience."),
+        },
+    )
+
+    assert response.status_code == 200
+
+    result = response.json()
+
+    assert result["ats_readiness_score"] == 100
+    assert result["ats_issues"] == []
+    assert "Email address detected" in result["ats_passed_checks"]
+    assert "Phone number detected" in result["ats_passed_checks"]
+    assert "Experience section detected" in result["ats_passed_checks"]
+    assert "Education section detected" in result["ats_passed_checks"]
+    assert "Skills section detected" in result["ats_passed_checks"]
