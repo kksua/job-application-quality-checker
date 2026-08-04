@@ -1,122 +1,427 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { useRef, useState } from "react";
+
+import { analysePdfApplication, analyseTextApplication } from "./api/analysis";
+import type { AnalysisResponse } from "./types/analysis";
+
+import "./App.css";
+
+type CvInputMode = "text" | "pdf";
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [cvInputMode, setCvInputMode] = useState<CvInputMode>("pdf");
+  const [cvText, setCvText] = useState("");
+  const [jobDescription, setJobDescription] = useState("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [analysisResult, setAnalysisResult] = useState<AnalysisResponse | null>(
+    null,
+  );
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  function handleFileChange(event: React.ChangeEvent<HTMLInputElement>): void {
+    const file = event.target.files?.[0] ?? null;
+    setSelectedFile(file);
+  }
+
+  function removeFile(): void {
+    setSelectedFile(null);
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  }
+
+  async function handleAnalyse(): Promise<void> {
+    setErrorMessage(null);
+    setAnalysisResult(null);
+
+    if (jobDescription.trim().length < 20) {
+      setErrorMessage(
+        "Please enter a job description containing at least 20 characters.",
+      );
+      return;
+    }
+
+    if (cvInputMode === "text" && cvText.trim().length < 20) {
+      setErrorMessage(
+        "Please enter CV text containing at least 20 characters.",
+      );
+      return;
+    }
+
+    if (cvInputMode === "pdf" && !selectedFile) {
+      setErrorMessage("Please upload a PDF CV.");
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+
+      const result =
+        cvInputMode === "text"
+          ? await analyseTextApplication({
+              cvText,
+              jobDescription,
+            })
+          : await analysePdfApplication(selectedFile as File, jobDescription);
+
+      setAnalysisResult(result);
+
+      window.setTimeout(() => {
+        document
+          .querySelector(".results-section")
+          ?.scrollIntoView({ behavior: "smooth" });
+      }, 0);
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "The application could not be analysed.",
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
+    <main className="app-shell">
+      <section className="hero">
+        <h1>Analyse your application</h1>
+
+        <p>
+          Paste your CV and job description to reveal your match score, ATS
+          readiness, skill gaps, and writing issues in seconds.
+        </p>
+      </section>
+
+      <section className="workspace">
+        <div className="input-grid">
+          <section className="input-panel">
+            <div className="section-heading-row input-panel-header">
+              <h2>Your CV</h2>
+
+              <div className="input-toggle" aria-label="Choose CV input method">
+                <button
+                  type="button"
+                  className={cvInputMode === "text" ? "active" : ""}
+                  onClick={() => setCvInputMode("text")}
+                >
+                  Paste Text
+                </button>
+
+                <button
+                  type="button"
+                  className={cvInputMode === "pdf" ? "active" : ""}
+                  onClick={() => setCvInputMode("pdf")}
+                >
+                  Upload PDF
+                </button>
+              </div>
+            </div>
+
+            {cvInputMode === "pdf" ? (
+              <div
+                className="upload-area"
+                onClick={() => fileInputRef.current?.click()}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    fileInputRef.current?.click();
+                  }
+                }}
+              >
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="application/pdf"
+                  onChange={handleFileChange}
+                  hidden
+                />
+
+                <div className="upload-icon" aria-hidden="true">
+                  ▤
+                </div>
+
+                {selectedFile ? (
+                  <>
+                    <p className="upload-file-name">{selectedFile.name}</p>
+
+                    <p className="upload-helper">Click to replace</p>
+
+                    <button
+                      type="button"
+                      className="remove-file-button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        removeFile();
+                      }}
+                    >
+                      × Remove
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <p className="upload-file-name">Upload your CV as a PDF</p>
+
+                    <p className="upload-helper">
+                      Click to browse or drag your file here
+                    </p>
+
+                    <p className="upload-limit">Maximum file size: 5 MB</p>
+                  </>
+                )}
+              </div>
+            ) : (
+              <textarea
+                className="large-textarea"
+                value={cvText}
+                onChange={(event) => setCvText(event.target.value)}
+                placeholder="Paste your CV text here..."
+                aria-label="CV text"
+              />
+            )}
+          </section>
+
+          <section className="input-panel">
+            <div className="section-heading-row input-panel-header">
+              <h2>Job Description</h2>
+            </div>
+
+            <textarea
+              className="large-textarea"
+              value={jobDescription}
+              onChange={(event) => setJobDescription(event.target.value)}
+              placeholder="Paste the complete job description here..."
+              aria-label="Job description"
+            />
+          </section>
         </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
+
         <button
           type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
+          className="analyse-button"
+          onClick={handleAnalyse}
+          disabled={isLoading}
         >
-          Count is {count}
+          {isLoading ? "Analysing..." : "Analyse Application"}
         </button>
+
+        {errorMessage && (
+          <p className="form-error" role="alert">
+            {errorMessage}
+          </p>
+        )}
       </section>
 
-      <div className="ticks"></div>
+      {analysisResult && (
+        <section className="results-section">
+          <div className="score-grid">
+            <article className="score-card score-card-wide">
+              <div
+                className="score-circle"
+                style={
+                  {
+                    "--score": `${analysisResult.match_score * 3.6}deg`,
+                  } as React.CSSProperties
+                }
+              >
+                <div className="score-circle-inner">
+                  <span>{analysisResult.match_score}%</span>
+                </div>
+              </div>
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+              <p>Job Match</p>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+              <div
+                className="score-circle"
+                style={
+                  {
+                    "--score": `${analysisResult.ats_readiness_score * 3.6}deg`,
+                  } as React.CSSProperties
+                }
+              >
+                <div className="score-circle-inner">
+                  <span>{analysisResult.ats_readiness_score}%</span>
+                </div>
+              </div>
+
+              <p>ATS Ready</p>
+            </article>
+
+            <article className="metric-card">
+              <p>Matched Skills</p>
+              <strong>{analysisResult.matching_skills.length}</strong>
+            </article>
+
+            <article className="metric-card">
+              <p>Missing Skills</p>
+              <strong className="error-text">
+                {analysisResult.missing_skills.length}
+              </strong>
+            </article>
+          </div>
+
+          <div className="result-panels">
+            <details open>
+              <summary>
+                <span>Matching Skills</span>
+                <small>{analysisResult.matching_skills.length}</small>
+              </summary>
+
+              <div className="panel-content tag-list">
+                {analysisResult.matching_skills.length > 0 ? (
+                  analysisResult.matching_skills.map((skill) => (
+                    <span className="skill-tag" key={skill}>
+                      {skill}
+                    </span>
+                  ))
+                ) : (
+                  <p>No matching skills detected.</p>
+                )}
+              </div>
+            </details>
+
+            <details open>
+              <summary>
+                <span>Missing Skills</span>
+                <small>{analysisResult.missing_skills.length}</small>
+              </summary>
+
+              <div className="panel-content tag-list">
+                {analysisResult.missing_skills.length > 0 ? (
+                  analysisResult.missing_skills.map((skill) => (
+                    <span className="skill-tag missing" key={skill}>
+                      {skill}
+                    </span>
+                  ))
+                ) : (
+                  <p>No missing skills detected. Great coverage!</p>
+                )}
+              </div>
+            </details>
+
+            <details>
+              <summary>
+                <span>Vague Phrases</span>
+                <small>{analysisResult.vague_phrases.length}</small>
+              </summary>
+
+              <div className="panel-content">
+                {analysisResult.vague_phrases.length > 0 ? (
+                  <ul className="issue-list">
+                    {analysisResult.vague_phrases.map((phrase) => (
+                      <li key={phrase}>{phrase}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p>No vague phrases detected.</p>
+                )}
+              </div>
+            </details>
+
+            <details>
+              <summary>
+                <span>Repeated Words</span>
+                <small>
+                  {Object.keys(analysisResult.repeated_words).length}
+                </small>
+              </summary>
+
+              <div className="panel-content">
+                {Object.keys(analysisResult.repeated_words).length > 0 ? (
+                  <ul className="issue-list">
+                    {Object.entries(analysisResult.repeated_words).map(
+                      ([word, count]) => (
+                        <li key={word}>
+                          {word}: {count} times
+                        </li>
+                      ),
+                    )}
+                  </ul>
+                ) : (
+                  <p>No problematic repetitions detected.</p>
+                )}
+              </div>
+            </details>
+
+            <details>
+              <summary>
+                <span>Bullet Issues</span>
+                <small>{analysisResult.bullet_issues.length}</small>
+              </summary>
+
+              <div className="panel-content">
+                {analysisResult.bullet_issues.length > 0 ? (
+                  <div className="issue-group">
+                    {analysisResult.bullet_issues.map((item) => (
+                      <article className="issue-card" key={item.bullet}>
+                        <strong>{item.bullet}</strong>
+
+                        <ul className="issue-list">
+                          {item.issues.map((issue) => (
+                            <li key={issue}>{issue}</li>
+                          ))}
+                        </ul>
+                      </article>
+                    ))}
+                  </div>
+                ) : (
+                  <p>No bullet issues detected.</p>
+                )}
+              </div>
+            </details>
+
+            <details>
+              <summary>
+                <span>ATS Issues</span>
+                <small>{analysisResult.ats_issues.length}</small>
+              </summary>
+
+              <div className="panel-content">
+                {analysisResult.ats_issues.length > 0 ? (
+                  <div className="issue-group">
+                    {analysisResult.ats_issues.map((issue, index) => (
+                      <article
+                        className={`issue-card severity-${issue.severity}`}
+                        key={`${issue.category}-${index}`}
+                      >
+                        <strong>{issue.category}</strong>
+                        <p>{issue.message}</p>
+                      </article>
+                    ))}
+                  </div>
+                ) : (
+                  <p>No ATS issues detected.</p>
+                )}
+              </div>
+            </details>
+
+            <details>
+              <summary>
+                <span>Passed Checks</span>
+                <small>{analysisResult.ats_passed_checks.length}</small>
+              </summary>
+
+              <div className="panel-content">
+                {analysisResult.ats_passed_checks.length > 0 ? (
+                  <ul className="issue-list passed-list">
+                    {analysisResult.ats_passed_checks.map((check) => (
+                      <li key={check}>{check}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p>No passed checks returned.</p>
+                )}
+              </div>
+            </details>
+          </div>
+        </section>
+      )}
+    </main>
+  );
 }
 
-export default App
+export default App;
