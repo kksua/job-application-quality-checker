@@ -25,6 +25,19 @@ class AtsIssueResponse(BaseModel):
     message: str
 
 
+class CriterionScoreResponse(BaseModel):
+    score: int | None
+    weight: int
+
+
+class ScoreBreakdownResponse(BaseModel):
+    technical_skills: CriterionScoreResponse
+    experience_relevance: CriterionScoreResponse
+    role_alignment: CriterionScoreResponse
+    education_qualifications: CriterionScoreResponse
+    location_eligibility: CriterionScoreResponse
+
+
 class AnalysisResponse(BaseModel):
     matching_skills: list[str]
     missing_skills: list[str]
@@ -35,3 +48,4 @@ class AnalysisResponse(BaseModel):
     ats_issues: list[AtsIssueResponse]
     ats_passed_checks: list[str]
     match_score: int
+    score_breakdown: ScoreBreakdownResponse
