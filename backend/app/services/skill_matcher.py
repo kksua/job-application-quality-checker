@@ -65,7 +65,7 @@ def analyse_skill_match(
     matching_skills = cv_skills & required_skills
     missing_skills = required_skills - cv_skills
 
-    score = calculate_match_score(
+    technical_skills_score = calculate_match_score(
         matching_skills=matching_skills,
         required_skills=required_skills,
     )
@@ -73,5 +73,5 @@ def analyse_skill_match(
     return (
         sorted(matching_skills),
         sorted(missing_skills),
-        score,
+        technical_skills_score,
     )

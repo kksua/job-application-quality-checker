@@ -30,6 +30,18 @@ def test_analysis_endpoint_returns_skill_analysis() -> None:
     assert "ats_issues" in result
     assert "ats_passed_checks" in result
 
+    assert "score_breakdown" in result
+
+    assert result["score_breakdown"]["technical_skills"]["score"] == 50
+    assert result["score_breakdown"]["technical_skills"]["weight"] == 45
+
+    assert result["score_breakdown"]["experience_relevance"]["weight"] == 25
+    assert result["score_breakdown"]["role_alignment"]["weight"] == 15
+    assert result["score_breakdown"]["education_qualifications"]["weight"] == 10
+
+    assert result["score_breakdown"]["location_eligibility"]["score"] is None
+    assert result["score_breakdown"]["location_eligibility"]["weight"] == 5
+
 
 def test_analysis_endpoint_rejects_short_cv_text() -> None:
     response = client.post(
@@ -122,3 +134,34 @@ def test_analysis_endpoint_returns_ats_readiness_results() -> None:
     assert "Experience section detected" in result["ats_passed_checks"]
     assert "Education section detected" in result["ats_passed_checks"]
     assert "Skills section detected" in result["ats_passed_checks"]
+
+
+def test_analysis_combines_skill_and_role_alignment_scores() -> None:
+    response = client.post(
+        "/analysis",
+        json={
+            "cv_text": ("Full-Stack Developer with Python and React experience."),
+            "job_description": (
+                "We are hiring a Full-Stack Developer with Python, "
+                "React, Docker and AWS experience."
+            ),
+        },
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert data["matching_skills"] == ["python", "react"]
+    assert data["missing_skills"] == ["aws", "docker"]
+
+    # Technical skills: 50
+    # Role alignment: 100
+    # Experience relevance may also be detected depending on wording.
+    assert "score_breakdown" in data
+    assert data["score_breakdown"]["technical_skills"]["score"] == 50
+    assert data["score_breakdown"]["technical_skills"]["weight"] == 45
+    assert data["score_breakdown"]["role_alignment"]["score"] == 100
+    assert data["score_breakdown"]["role_alignment"]["weight"] == 15
+
+    assert data["match_score"] == 62
