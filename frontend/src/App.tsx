@@ -9,16 +9,21 @@ type CvInputMode = "text" | "pdf";
 
 function App() {
   const [cvInputMode, setCvInputMode] = useState<CvInputMode>("pdf");
+
   const [cvText, setCvText] = useState("");
   const [jobDescription, setJobDescription] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
   const [analysisResult, setAnalysisResult] = useState<AnalysisResponse | null>(
     null,
   );
+
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const resultsRef = useRef<HTMLElement | null>(null);
 
   function handleFileChange(event: React.ChangeEvent<HTMLInputElement>): void {
     const file = event.target.files?.[0] ?? null;
@@ -70,10 +75,11 @@ function App() {
       setAnalysisResult(result);
 
       window.setTimeout(() => {
-        document
-          .querySelector(".results-section")
-          ?.scrollIntoView({ behavior: "smooth" });
-      }, 0);
+        resultsRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      }, 100);
     } catch (error) {
       setErrorMessage(
         error instanceof Error
@@ -206,7 +212,14 @@ function App() {
           onClick={handleAnalyse}
           disabled={isLoading}
         >
-          {isLoading ? "Analysing..." : "Analyse Application"}
+          {isLoading ? (
+            <>
+              <span className="loading-spinner" aria-hidden="true" />
+              Analysing your application...
+            </>
+          ) : (
+            "Analyse Application"
+          )}
         </button>
 
         {errorMessage && (
@@ -217,7 +230,21 @@ function App() {
       </section>
 
       {analysisResult && (
-        <section className="results-section">
+        <section ref={resultsRef} className="results-section">
+          <div className="analysis-success">
+            <div className="analysis-success-icon" aria-hidden="true">
+              ✓
+            </div>
+
+            <div>
+              <strong>Analysis complete</strong>
+              <p>
+                Your CV has been compared with the job description. Review your
+                results below.
+              </p>
+            </div>
+          </div>
+
           <div className="score-grid">
             <article className="score-card score-card-wide">
               <div
@@ -253,21 +280,94 @@ function App() {
 
             <article className="metric-card">
               <p>Matched Skills</p>
+
               <strong>{analysisResult.matching_skills.length}</strong>
             </article>
 
             <article className="metric-card">
               <p>Missing Skills</p>
+
               <strong className="error-text">
                 {analysisResult.missing_skills.length}
               </strong>
             </article>
           </div>
 
+          <section className="score-breakdown-card">
+            <div className="score-breakdown-header">
+              <div>
+                <p className="score-breakdown-eyebrow">Score Breakdown</p>
+
+                <h2>How your match score was calculated</h2>
+              </div>
+
+              <span className="score-breakdown-total">
+                {analysisResult.match_score}%
+              </span>
+            </div>
+
+            <div className="score-breakdown-list">
+              {[
+                {
+                  label: "Technical Skills",
+                  value: analysisResult.score_breakdown.technical_skills,
+                },
+                {
+                  label: "Experience Relevance",
+                  value: analysisResult.score_breakdown.experience_relevance,
+                },
+                {
+                  label: "Role Alignment",
+                  value: analysisResult.score_breakdown.role_alignment,
+                },
+                {
+                  label: "Education & Qualifications",
+                  value:
+                    analysisResult.score_breakdown.education_qualifications,
+                },
+                {
+                  label: "Location & Eligibility",
+                  value: analysisResult.score_breakdown.location_eligibility,
+                },
+              ].map(({ label, value }) => (
+                <div className="score-breakdown-row" key={label}>
+                  <div className="score-breakdown-row-top">
+                    <div>
+                      <strong>{label}</strong>
+
+                      <span>Weight {value.weight}%</span>
+                    </div>
+
+                    <strong className="criterion-score">
+                      {value.score === null
+                        ? "Not enough information"
+                        : `${value.score}%`}
+                    </strong>
+                  </div>
+
+                  <div
+                    className={`criterion-progress ${
+                      value.score === null ? "unknown" : ""
+                    }`}
+                    aria-label={`${label} score`}
+                  >
+                    <div
+                      className="criterion-progress-fill"
+                      style={{
+                        width: `${value.score ?? 0}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+
           <div className="result-panels">
             <details open>
               <summary>
                 <span>Matching Skills</span>
+
                 <small>{analysisResult.matching_skills.length}</small>
               </summary>
 
@@ -287,6 +387,7 @@ function App() {
             <details open>
               <summary>
                 <span>Missing Skills</span>
+
                 <small>{analysisResult.missing_skills.length}</small>
               </summary>
 
@@ -306,6 +407,7 @@ function App() {
             <details>
               <summary>
                 <span>Vague Phrases</span>
+
                 <small>{analysisResult.vague_phrases.length}</small>
               </summary>
 
@@ -325,6 +427,7 @@ function App() {
             <details>
               <summary>
                 <span>Repeated Words</span>
+
                 <small>
                   {Object.keys(analysisResult.repeated_words).length}
                 </small>
@@ -350,6 +453,7 @@ function App() {
             <details>
               <summary>
                 <span>Bullet Issues</span>
+
                 <small>{analysisResult.bullet_issues.length}</small>
               </summary>
 
@@ -377,6 +481,7 @@ function App() {
             <details>
               <summary>
                 <span>ATS Issues</span>
+
                 <small>{analysisResult.ats_issues.length}</small>
               </summary>
 
@@ -389,6 +494,7 @@ function App() {
                         key={`${issue.category}-${index}`}
                       >
                         <strong>{issue.category}</strong>
+
                         <p>{issue.message}</p>
                       </article>
                     ))}
@@ -402,6 +508,7 @@ function App() {
             <details>
               <summary>
                 <span>Passed Checks</span>
+
                 <small>{analysisResult.ats_passed_checks.length}</small>
               </summary>
 

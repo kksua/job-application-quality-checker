@@ -47,6 +47,28 @@ const successfulAnalysis: AnalysisResponse = {
     "Skills section detected",
   ],
   match_score: 67,
+  score_breakdown: {
+    technical_skills: {
+      score: 75,
+      weight: 45,
+    },
+    experience_relevance: {
+      score: 70,
+      weight: 25,
+    },
+    role_alignment: {
+      score: 85,
+      weight: 15,
+    },
+    education_qualifications: {
+      score: 100,
+      weight: 10,
+    },
+    location_eligibility: {
+      score: null,
+      weight: 5,
+    },
+  },
 };
 
 describe("App", () => {
@@ -64,7 +86,9 @@ describe("App", () => {
     ).toBeInTheDocument();
 
     expect(
-      screen.getByRole("heading", { name: /your cv/i }),
+      screen.getByRole("heading", {
+        name: /your cv/i,
+      }),
     ).toBeInTheDocument();
 
     expect(
@@ -87,10 +111,16 @@ describe("App", () => {
 
     expect(screen.getByText(/upload your cv as a pdf/i)).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: /paste text/i }));
+    await user.click(
+      screen.getByRole("button", {
+        name: /paste text/i,
+      }),
+    );
 
     expect(
-      screen.getByRole("textbox", { name: /cv text/i }),
+      screen.getByRole("textbox", {
+        name: /cv text/i,
+      }),
     ).toBeInTheDocument();
 
     expect(
@@ -119,7 +149,11 @@ describe("App", () => {
 
     render(<App />);
 
-    await user.click(screen.getByRole("button", { name: /paste text/i }));
+    await user.click(
+      screen.getByRole("button", {
+        name: /paste text/i,
+      }),
+    );
 
     await user.type(
       screen.getByRole("textbox", {
@@ -129,7 +163,9 @@ describe("App", () => {
     );
 
     await user.type(
-      screen.getByRole("textbox", { name: /cv text/i }),
+      screen.getByRole("textbox", {
+        name: /cv text/i,
+      }),
       "Python",
     );
 
@@ -151,10 +187,16 @@ describe("App", () => {
 
     render(<App />);
 
-    await user.click(screen.getByRole("button", { name: /paste text/i }));
+    await user.click(
+      screen.getByRole("button", {
+        name: /paste text/i,
+      }),
+    );
 
     await user.type(
-      screen.getByRole("textbox", { name: /cv text/i }),
+      screen.getByRole("textbox", {
+        name: /cv text/i,
+      }),
       "Python developer with FastAPI, React and PostgreSQL experience.",
     );
 
@@ -177,12 +219,32 @@ describe("App", () => {
         "We need a Python developer with FastAPI, React, Docker and AWS.",
     });
 
-    expect(await screen.findByText("67%")).toBeInTheDocument();
-    expect(screen.getByText("85%")).toBeInTheDocument();
+    const matchScores = await screen.findAllByText("67%");
+
+    expect(matchScores.length).toBeGreaterThanOrEqual(2);
+
+    const eightyFiveScores = screen.getAllByText("85%");
+
+    expect(eightyFiveScores.length).toBeGreaterThanOrEqual(2);
+
+    expect(screen.getByText("Analysis complete")).toBeInTheDocument();
+
+    expect(screen.getByText("Technical Skills")).toBeInTheDocument();
+
+    expect(screen.getByText("Experience Relevance")).toBeInTheDocument();
+
+    expect(screen.getByText("Role Alignment")).toBeInTheDocument();
+
+    expect(screen.getByText("Education & Qualifications")).toBeInTheDocument();
+
+    expect(screen.getByText("Location & Eligibility")).toBeInTheDocument();
+
+    expect(screen.getByText("Not enough information")).toBeInTheDocument();
 
     expect(screen.getByText("Matched Skills")).toBeInTheDocument();
 
     expect(screen.getByText("fastapi")).toBeInTheDocument();
+
     expect(screen.getByText("docker")).toBeInTheDocument();
   });
 
@@ -195,10 +257,16 @@ describe("App", () => {
 
     render(<App />);
 
-    await user.click(screen.getByRole("button", { name: /paste text/i }));
+    await user.click(
+      screen.getByRole("button", {
+        name: /paste text/i,
+      }),
+    );
 
     await user.type(
-      screen.getByRole("textbox", { name: /cv text/i }),
+      screen.getByRole("textbox", {
+        name: /cv text/i,
+      }),
       "Python developer with FastAPI and React experience.",
     );
 
