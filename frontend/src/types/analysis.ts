@@ -11,6 +11,19 @@ export interface AtsIssue {
   message: string;
 }
 
+export interface CriterionScore {
+  score: number | null;
+  weight: number;
+}
+
+export interface ScoreBreakdown {
+  technical_skills: CriterionScore;
+  experience_relevance: CriterionScore;
+  role_alignment: CriterionScore;
+  education_qualifications: CriterionScore;
+  location_eligibility: CriterionScore;
+}
+
 export interface AnalysisResponse {
   matching_skills: string[];
   missing_skills: string[];
@@ -21,4 +34,5 @@ export interface AnalysisResponse {
   ats_issues: AtsIssue[];
   ats_passed_checks: string[];
   match_score: number;
+  score_breakdown: ScoreBreakdown;
 }
