@@ -36,3 +36,8 @@ export interface AnalysisResponse {
   match_score: number;
   score_breakdown: ScoreBreakdown;
 }
+
+export interface TailoringResponse {
+  headline: string;
+  summary: string;
+}

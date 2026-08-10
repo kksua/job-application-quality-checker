@@ -1,7 +1,8 @@
 import { useRef, useState } from "react";
 
 import { analysePdfApplication, analyseTextApplication } from "./api/analysis";
-import type { AnalysisResponse } from "./types/analysis";
+import { generateTailoringSuggestions } from "./api/tailoring";
+import type { AnalysisResponse, TailoringResponse } from "./types/analysis";
 
 import "./App.css";
 
@@ -21,6 +22,17 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  const [tailoringResult, setTailoringResult] =
+    useState<TailoringResponse | null>(null);
+
+  const [isTailoring, setIsTailoring] = useState(false);
+
+  const [tailoringError, setTailoringError] = useState<string | null>(null);
+
+  const [useSuggestedHeadline, setUseSuggestedHeadline] = useState(false);
+
+  const [useSuggestedSummary, setUseSuggestedSummary] = useState(false);
+
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const resultsRef = useRef<HTMLElement | null>(null);
@@ -38,9 +50,17 @@ function App() {
     }
   }
 
+  function resetTailoring(): void {
+    setTailoringResult(null);
+    setTailoringError(null);
+    setUseSuggestedHeadline(false);
+    setUseSuggestedSummary(false);
+  }
+
   async function handleAnalyse(): Promise<void> {
     setErrorMessage(null);
     setAnalysisResult(null);
+    resetTailoring();
 
     if (jobDescription.trim().length < 20) {
       setErrorMessage(
@@ -91,6 +111,31 @@ function App() {
     }
   }
 
+  async function handleGenerateTailoring(): Promise<void> {
+    setTailoringError(null);
+    setUseSuggestedHeadline(false);
+    setUseSuggestedSummary(false);
+
+    try {
+      setIsTailoring(true);
+
+      const result = await generateTailoringSuggestions({
+        cvText,
+        jobDescription,
+      });
+
+      setTailoringResult(result);
+    } catch (error) {
+      setTailoringError(
+        error instanceof Error
+          ? error.message
+          : "AI tailoring suggestions could not be generated.",
+      );
+    } finally {
+      setIsTailoring(false);
+    }
+  }
+
   return (
     <main className="app-shell">
       <section className="hero">
@@ -112,7 +157,10 @@ function App() {
                 <button
                   type="button"
                   className={cvInputMode === "text" ? "active" : ""}
-                  onClick={() => setCvInputMode("text")}
+                  onClick={() => {
+                    setCvInputMode("text");
+                    resetTailoring();
+                  }}
                 >
                   Paste Text
                 </button>
@@ -120,7 +168,10 @@ function App() {
                 <button
                   type="button"
                   className={cvInputMode === "pdf" ? "active" : ""}
-                  onClick={() => setCvInputMode("pdf")}
+                  onClick={() => {
+                    setCvInputMode("pdf");
+                    resetTailoring();
+                  }}
                 >
                   Upload PDF
                 </button>
@@ -184,7 +235,10 @@ function App() {
               <textarea
                 className="large-textarea"
                 value={cvText}
-                onChange={(event) => setCvText(event.target.value)}
+                onChange={(event) => {
+                  setCvText(event.target.value);
+                  resetTailoring();
+                }}
                 placeholder="Paste your CV text here..."
                 aria-label="CV text"
               />
@@ -199,7 +253,10 @@ function App() {
             <textarea
               className="large-textarea"
               value={jobDescription}
-              onChange={(event) => setJobDescription(event.target.value)}
+              onChange={(event) => {
+                setJobDescription(event.target.value);
+                resetTailoring();
+              }}
               placeholder="Paste the complete job description here..."
               aria-label="Job description"
             />
@@ -238,6 +295,7 @@ function App() {
 
             <div>
               <strong>Analysis complete</strong>
+
               <p>
                 Your CV has been compared with the job description. Review your
                 results below.
@@ -362,6 +420,134 @@ function App() {
               ))}
             </div>
           </section>
+
+          {cvInputMode === "text" && (
+            <section className="ai-tailoring-card">
+              <div className="ai-tailoring-header">
+                <div>
+                  <h2>Tailor your CV for this role</h2>
+
+                  <p className="ai-tailoring-description">
+                    Generate a job-specific headline and professional summary
+                    using only information already present in your CV.
+                  </p>
+                </div>
+
+                {!tailoringResult && (
+                  <button
+                    type="button"
+                    className="ai-tailoring-button"
+                    onClick={handleGenerateTailoring}
+                    disabled={isTailoring}
+                  >
+                    {isTailoring ? (
+                      <>
+                        <span className="loading-spinner" aria-hidden="true" />
+                        Tailoring your CV...
+                      </>
+                    ) : (
+                      "Tailor my CV with AI"
+                    )}
+                  </button>
+                )}
+              </div>
+
+              {tailoringError && (
+                <p className="form-error" role="alert">
+                  {tailoringError}
+                </p>
+              )}
+
+              {tailoringResult && (
+                <div className="ai-suggestions">
+                  <article className="ai-suggestion-card">
+                    <div className="ai-suggestion-title">
+                      <div>
+                        <span>Suggested headline</span>
+
+                        <h3>{tailoringResult.headline}</h3>
+                      </div>
+
+                      {useSuggestedHeadline && (
+                        <span className="accepted-badge">✓ Accepted</span>
+                      )}
+                    </div>
+
+                    <div className="ai-suggestion-actions">
+                      <button
+                        type="button"
+                        className={
+                          useSuggestedHeadline
+                            ? "suggestion-button secondary"
+                            : "suggestion-button"
+                        }
+                        onClick={() => setUseSuggestedHeadline(true)}
+                      >
+                        Use suggestion
+                      </button>
+
+                      <button
+                        type="button"
+                        className="suggestion-button secondary"
+                        onClick={() => setUseSuggestedHeadline(false)}
+                      >
+                        Keep original
+                      </button>
+                    </div>
+                  </article>
+
+                  <article className="ai-suggestion-card">
+                    <div className="ai-suggestion-title">
+                      <div>
+                        <span>Suggested professional summary</span>
+
+                        <p className="suggested-summary">
+                          {tailoringResult.summary}
+                        </p>
+                      </div>
+
+                      {useSuggestedSummary && (
+                        <span className="accepted-badge">✓ Accepted</span>
+                      )}
+                    </div>
+
+                    <div className="ai-suggestion-actions">
+                      <button
+                        type="button"
+                        className={
+                          useSuggestedSummary
+                            ? "suggestion-button secondary"
+                            : "suggestion-button"
+                        }
+                        onClick={() => setUseSuggestedSummary(true)}
+                      >
+                        Use suggestion
+                      </button>
+
+                      <button
+                        type="button"
+                        className="suggestion-button secondary"
+                        onClick={() => setUseSuggestedSummary(false)}
+                      >
+                        Keep original
+                      </button>
+                    </div>
+                  </article>
+
+                  <button
+                    type="button"
+                    className="regenerate-button"
+                    onClick={handleGenerateTailoring}
+                    disabled={isTailoring}
+                  >
+                    {isTailoring
+                      ? "Regenerating..."
+                      : "↻ Generate another version"}
+                  </button>
+                </div>
+              )}
+            </section>
+          )}
 
           <div className="result-panels">
             <details open>
