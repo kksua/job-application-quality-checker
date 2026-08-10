@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import App from "./App";
 import { analysePdfApplication, analyseTextApplication } from "./api/analysis";
+import { generateTailoringSuggestions } from "./api/tailoring";
 import type { AnalysisResponse } from "./types/analysis";
 
 vi.mock("./api/analysis", () => ({
@@ -11,9 +12,17 @@ vi.mock("./api/analysis", () => ({
   analysePdfApplication: vi.fn(),
 }));
 
+vi.mock("./api/tailoring", () => ({
+  generateTailoringSuggestions: vi.fn(),
+}));
+
 const mockedAnalyseTextApplication = vi.mocked(analyseTextApplication);
 
 const mockedAnalysePdfApplication = vi.mocked(analysePdfApplication);
+
+const mockedGenerateTailoringSuggestions = vi.mocked(
+  generateTailoringSuggestions,
+);
 
 const successfulAnalysis: AnalysisResponse = {
   matching_skills: ["fastapi", "postgresql", "python", "react"],
@@ -71,11 +80,34 @@ const successfulAnalysis: AnalysisResponse = {
   },
 };
 
+const successfulTailoring = {
+  headline: "Software Engineering Graduate | React & FastAPI",
+  summary:
+    "Software Engineering graduate with hands-on experience developing " +
+    "full-stack applications using React, TypeScript and FastAPI. " +
+    "Built a RAG workflow that reduced manual document review by 60% " +
+    "and contributed to web platforms using PostgreSQL. Brings practical " +
+    "frontend, backend and API integration experience and aims to grow " +
+    "in a full-stack engineering role.",
+};
+
+const regeneratedTailoring = {
+  headline: "Full-Stack Engineering Graduate | React & TypeScript",
+  summary:
+    "Software Engineering graduate with practical experience building " +
+    "full-stack web applications using React, TypeScript, FastAPI and " +
+    "PostgreSQL. Developed a RAG workflow that reduced manual review by " +
+    "60%. Combines frontend, backend and API integration experience with " +
+    "a focus on contributing to reliable web products and growing as a " +
+    "full-stack developer.",
+};
+
 describe("App", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
+  // Checks that the main application form and primary controls render.
   test("renders the main application form", () => {
     render(<App />);
 
@@ -104,6 +136,7 @@ describe("App", () => {
     ).toBeInTheDocument();
   });
 
+  // Checks that the user can switch from PDF upload to pasted CV text.
   test("switches from PDF upload to CV text input", async () => {
     const user = userEvent.setup();
 
@@ -128,6 +161,7 @@ describe("App", () => {
     ).not.toBeInTheDocument();
   });
 
+  // Checks validation when no job description is provided.
   test("shows validation when the job description is empty", async () => {
     const user = userEvent.setup();
 
@@ -144,6 +178,7 @@ describe("App", () => {
     );
   });
 
+  // Checks validation when pasted CV text does not meet the minimum length.
   test("shows validation when pasted CV text is too short", async () => {
     const user = userEvent.setup();
 
@@ -180,6 +215,7 @@ describe("App", () => {
     );
   });
 
+  // Checks that pasted CV text is submitted and analysis results render.
   test("submits pasted CV text and displays analysis results", async () => {
     const user = userEvent.setup();
 
@@ -248,6 +284,7 @@ describe("App", () => {
     expect(screen.getByText("docker")).toBeInTheDocument();
   });
 
+  // Checks that backend analysis errors are shown to the user.
   test("shows an API error message", async () => {
     const user = userEvent.setup();
 
@@ -288,11 +325,360 @@ describe("App", () => {
     );
   });
 
+  // Checks that the app starts in PDF mode without calling the PDF API.
   test("starts in PDF mode without calling the PDF API", () => {
     render(<App />);
 
     expect(screen.getByText(/upload your cv as a pdf/i)).toBeInTheDocument();
 
     expect(mockedAnalysePdfApplication).not.toHaveBeenCalled();
+  });
+
+  // Checks that the AI tailoring button appears after text analysis.
+  test("shows AI tailoring after text analysis", async () => {
+    const user = userEvent.setup();
+
+    mockedAnalyseTextApplication.mockResolvedValue(successfulAnalysis);
+
+    render(<App />);
+
+    await user.click(
+      screen.getByRole("button", {
+        name: /paste text/i,
+      }),
+    );
+
+    await user.type(
+      screen.getByRole("textbox", {
+        name: /cv text/i,
+      }),
+      "Software Engineering graduate with React, TypeScript, FastAPI and PostgreSQL experience.",
+    );
+
+    await user.type(
+      screen.getByRole("textbox", {
+        name: /job description/i,
+      }),
+      "We are hiring a Junior Full-Stack Developer with React, TypeScript and FastAPI experience.",
+    );
+
+    await user.click(
+      screen.getByRole("button", {
+        name: /analyse application/i,
+      }),
+    );
+
+    expect(
+      await screen.findByRole("button", {
+        name: /tailor my cv with ai/i,
+      }),
+    ).toBeInTheDocument();
+  });
+
+  // Checks that a successful AI call renders the headline and summary.
+  test("renders AI headline and summary after successful tailoring", async () => {
+    const user = userEvent.setup();
+
+    mockedAnalyseTextApplication.mockResolvedValue(successfulAnalysis);
+
+    mockedGenerateTailoringSuggestions.mockResolvedValueOnce(
+      successfulTailoring,
+    );
+
+    render(<App />);
+
+    await user.click(
+      screen.getByRole("button", {
+        name: /paste text/i,
+      }),
+    );
+
+    await user.type(
+      screen.getByRole("textbox", {
+        name: /cv text/i,
+      }),
+      "Software Engineering graduate with React, TypeScript, FastAPI and PostgreSQL experience.",
+    );
+
+    await user.type(
+      screen.getByRole("textbox", {
+        name: /job description/i,
+      }),
+      "We are hiring a Junior Full-Stack Developer with React, TypeScript and FastAPI experience.",
+    );
+
+    await user.click(
+      screen.getByRole("button", {
+        name: /analyse application/i,
+      }),
+    );
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: /tailor my cv with ai/i,
+      }),
+    );
+
+    expect(
+      await screen.findByText(successfulTailoring.headline),
+    ).toBeInTheDocument();
+
+    expect(screen.getByText(successfulTailoring.summary)).toBeInTheDocument();
+
+    expect(mockedGenerateTailoringSuggestions).toHaveBeenCalledWith({
+      cvText:
+        "Software Engineering graduate with React, TypeScript, FastAPI and PostgreSQL experience.",
+      jobDescription:
+        "We are hiring a Junior Full-Stack Developer with React, TypeScript and FastAPI experience.",
+    });
+  });
+
+  // Checks that the headline suggestion can be accepted and reverted.
+  test("accepts and clears the headline suggestion", async () => {
+    const user = userEvent.setup();
+
+    mockedAnalyseTextApplication.mockResolvedValue(successfulAnalysis);
+
+    mockedGenerateTailoringSuggestions.mockResolvedValueOnce(
+      successfulTailoring,
+    );
+
+    render(<App />);
+
+    await user.click(
+      screen.getByRole("button", {
+        name: /paste text/i,
+      }),
+    );
+
+    await user.type(
+      screen.getByRole("textbox", {
+        name: /cv text/i,
+      }),
+      "Software Engineering graduate with React, TypeScript, FastAPI and PostgreSQL experience.",
+    );
+
+    await user.type(
+      screen.getByRole("textbox", {
+        name: /job description/i,
+      }),
+      "We are hiring a Junior Full-Stack Developer with React, TypeScript and FastAPI experience.",
+    );
+
+    await user.click(
+      screen.getByRole("button", {
+        name: /analyse application/i,
+      }),
+    );
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: /tailor my cv with ai/i,
+      }),
+    );
+
+    const useButtons = await screen.findAllByRole("button", {
+      name: /use suggestion/i,
+    });
+
+    await user.click(useButtons[0]);
+
+    expect(screen.getByText(/accepted/i)).toBeInTheDocument();
+
+    const keepButtons = screen.getAllByRole("button", {
+      name: /keep original/i,
+    });
+
+    await user.click(keepButtons[0]);
+
+    expect(screen.queryByText(/accepted/i)).not.toBeInTheDocument();
+  });
+
+  // Checks that requesting another version calls AI again and updates the output.
+  test("regenerates AI tailoring suggestions", async () => {
+    const user = userEvent.setup();
+
+    mockedAnalyseTextApplication.mockResolvedValue(successfulAnalysis);
+
+    mockedGenerateTailoringSuggestions
+      .mockResolvedValueOnce(successfulTailoring)
+      .mockResolvedValueOnce(regeneratedTailoring);
+
+    render(<App />);
+
+    await user.click(
+      screen.getByRole("button", {
+        name: /paste text/i,
+      }),
+    );
+
+    await user.type(
+      screen.getByRole("textbox", {
+        name: /cv text/i,
+      }),
+      "Software Engineering graduate with React, TypeScript, FastAPI and PostgreSQL experience.",
+    );
+
+    await user.type(
+      screen.getByRole("textbox", {
+        name: /job description/i,
+      }),
+      "We are hiring a Junior Full-Stack Developer with React, TypeScript and FastAPI experience.",
+    );
+
+    await user.click(
+      screen.getByRole("button", {
+        name: /analyse application/i,
+      }),
+    );
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: /tailor my cv with ai/i,
+      }),
+    );
+
+    expect(
+      await screen.findByText(successfulTailoring.headline),
+    ).toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("button", {
+        name: /generate another version/i,
+      }),
+    );
+
+    expect(
+      await screen.findByText(regeneratedTailoring.headline),
+    ).toBeInTheDocument();
+
+    expect(mockedGenerateTailoringSuggestions).toHaveBeenCalledTimes(2);
+  });
+
+  // Checks that AI tailoring errors are displayed without breaking analysis results.
+  test("shows an error when AI tailoring fails", async () => {
+    const user = userEvent.setup();
+
+    mockedAnalyseTextApplication.mockResolvedValue(successfulAnalysis);
+
+    mockedGenerateTailoringSuggestions.mockRejectedValueOnce(
+      new Error("AI tailoring suggestions could not be generated."),
+    );
+
+    render(<App />);
+
+    await user.click(
+      screen.getByRole("button", {
+        name: /paste text/i,
+      }),
+    );
+
+    await user.type(
+      screen.getByRole("textbox", {
+        name: /cv text/i,
+      }),
+      "Software Engineering graduate with React, TypeScript, FastAPI and PostgreSQL experience.",
+    );
+
+    await user.type(
+      screen.getByRole("textbox", {
+        name: /job description/i,
+      }),
+      "We are hiring a Junior Full-Stack Developer with React, TypeScript and FastAPI experience.",
+    );
+
+    await user.click(
+      screen.getByRole("button", {
+        name: /analyse application/i,
+      }),
+    );
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: /tailor my cv with ai/i,
+      }),
+    );
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "AI tailoring suggestions could not be generated.",
+    );
+
+    expect(screen.getByText("Analysis complete")).toBeInTheDocument();
+  });
+
+  // Checks that changing the CV removes stale AI suggestions.
+  test("resets AI suggestions when CV text changes", async () => {
+    const user = userEvent.setup();
+
+    mockedAnalyseTextApplication.mockResolvedValue(successfulAnalysis);
+
+    mockedGenerateTailoringSuggestions.mockResolvedValueOnce(
+      successfulTailoring,
+    );
+
+    render(<App />);
+
+    await user.click(
+      screen.getByRole("button", {
+        name: /paste text/i,
+      }),
+    );
+
+    const cvTextarea = screen.getByRole("textbox", {
+      name: /cv text/i,
+    });
+
+    await user.type(
+      cvTextarea,
+      "Software Engineering graduate with React, TypeScript, FastAPI and PostgreSQL experience.",
+    );
+
+    await user.type(
+      screen.getByRole("textbox", {
+        name: /job description/i,
+      }),
+      "We are hiring a Junior Full-Stack Developer with React, TypeScript and FastAPI experience.",
+    );
+
+    await user.click(
+      screen.getByRole("button", {
+        name: /analyse application/i,
+      }),
+    );
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: /tailor my cv with ai/i,
+      }),
+    );
+
+    expect(
+      await screen.findByText(successfulTailoring.headline),
+    ).toBeInTheDocument();
+
+    await user.type(cvTextarea, " Updated");
+
+    expect(
+      screen.queryByText(successfulTailoring.headline),
+    ).not.toBeInTheDocument();
+
+    expect(
+      screen.getByRole("button", {
+        name: /tailor my cv with ai/i,
+      }),
+    ).toBeInTheDocument();
+  });
+
+  // Checks that AI tailoring remains hidden when the app is in PDF mode.
+  test("does not show AI tailoring in PDF mode", async () => {
+    render(<App />);
+
+    expect(screen.getByText(/upload your cv as a pdf/i)).toBeInTheDocument();
+
+    expect(
+      screen.queryByRole("button", {
+        name: /tailor my cv with ai/i,
+      }),
+    ).not.toBeInTheDocument();
   });
 });

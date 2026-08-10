@@ -49,3 +49,19 @@ class AnalysisResponse(BaseModel):
     ats_passed_checks: list[str]
     match_score: int
     score_breakdown: ScoreBreakdownResponse
+
+
+class TailoringRequest(BaseModel):
+    cv_text: str = Field(
+        min_length=20,
+        description="The candidate's CV content.",
+    )
+    job_description: str = Field(
+        min_length=20,
+        description="The target job description.",
+    )
+
+
+class TailoringResponse(BaseModel):
+    headline: str
+    summary: str
