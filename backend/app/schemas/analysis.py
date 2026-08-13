@@ -65,3 +65,22 @@ class TailoringRequest(BaseModel):
 class TailoringResponse(BaseModel):
     headline: str
     summary: str
+
+
+class BulletRewriteRequest(BaseModel):
+    bullet: str = Field(
+        min_length=3,
+        description="The original CV bullet to rewrite.",
+    )
+    cv_context: str = Field(
+        min_length=20,
+        description="Relevant candidate CV context for fact preservation.",
+    )
+    job_description: str = Field(
+        min_length=20,
+        description="The target job description.",
+    )
+
+
+class BulletRewriteResponse(BaseModel):
+    rewritten_bullet: str
