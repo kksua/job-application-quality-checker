@@ -1,8 +1,11 @@
 import { useRef, useState } from "react";
 
 import { analysePdfApplication, analyseTextApplication } from "./api/analysis";
-import { generateTailoringSuggestions } from "./api/tailoring";
+import { parseCv } from "./api/cv";
+import { generateTailoringSuggestions, rewriteBullet } from "./api/tailoring";
+import { CvPreview } from "./CvPreview";
 import type { AnalysisResponse, TailoringResponse } from "./types/analysis";
+import type { StructuredCv } from "./types/cv";
 
 import "./App.css";
 
@@ -19,7 +22,13 @@ function App() {
     null,
   );
 
+  const [structuredCv, setStructuredCv] = useState<StructuredCv | null>(null);
+
+  const [originalStructuredCv, setOriginalStructuredCv] =
+    useState<StructuredCv | null>(null);
+
   const [isLoading, setIsLoading] = useState(false);
+
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const [tailoringResult, setTailoringResult] =
@@ -39,11 +48,20 @@ function App() {
 
   function handleFileChange(event: React.ChangeEvent<HTMLInputElement>): void {
     const file = event.target.files?.[0] ?? null;
+
     setSelectedFile(file);
+    setAnalysisResult(null);
+    setStructuredCv(null);
+    setOriginalStructuredCv(null);
+    resetTailoring();
   }
 
   function removeFile(): void {
     setSelectedFile(null);
+    setAnalysisResult(null);
+    setStructuredCv(null);
+    setOriginalStructuredCv(null);
+    resetTailoring();
 
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
@@ -57,9 +75,18 @@ function App() {
     setUseSuggestedSummary(false);
   }
 
+  function resetResults(): void {
+    setAnalysisResult(null);
+    setStructuredCv(null);
+    setOriginalStructuredCv(null);
+    resetTailoring();
+  }
+
   async function handleAnalyse(): Promise<void> {
     setErrorMessage(null);
     setAnalysisResult(null);
+    setStructuredCv(null);
+    setOriginalStructuredCv(null);
     resetTailoring();
 
     if (jobDescription.trim().length < 20) {
@@ -84,15 +111,36 @@ function App() {
     try {
       setIsLoading(true);
 
-      const result =
-        cvInputMode === "text"
-          ? await analyseTextApplication({
-              cvText,
-              jobDescription,
-            })
-          : await analysePdfApplication(selectedFile as File, jobDescription);
+      if (cvInputMode === "text") {
+        const result = await analyseTextApplication({
+          cvText,
+          jobDescription,
+        });
 
-      setAnalysisResult(result);
+        setAnalysisResult(result);
+
+        try {
+          const parsedCv = await parseCv({
+            cvText,
+            jobDescription,
+          });
+
+          setStructuredCv(parsedCv);
+          setOriginalStructuredCv(parsedCv);
+        } catch (error) {
+          console.error("Structured CV parsing failed:", error);
+
+          setStructuredCv(null);
+          setOriginalStructuredCv(null);
+        }
+      } else {
+        const result = await analysePdfApplication(
+          selectedFile as File,
+          jobDescription,
+        );
+
+        setAnalysisResult(result);
+      }
 
       window.setTimeout(() => {
         resultsRef.current?.scrollIntoView({
@@ -136,6 +184,46 @@ function App() {
     }
   }
 
+  function useTailoredHeadline(): void {
+    if (!tailoringResult) {
+      return;
+    }
+
+    setStructuredCv((currentCv) =>
+      currentCv ? { ...currentCv, headline: tailoringResult.headline } : null,
+    );
+    setUseSuggestedHeadline(true);
+  }
+
+  function keepOriginalHeadline(): void {
+    setStructuredCv((currentCv) =>
+      currentCv
+        ? { ...currentCv, headline: originalStructuredCv?.headline ?? null }
+        : null,
+    );
+    setUseSuggestedHeadline(false);
+  }
+
+  function useTailoredSummary(): void {
+    if (!tailoringResult) {
+      return;
+    }
+
+    setStructuredCv((currentCv) =>
+      currentCv ? { ...currentCv, summary: tailoringResult.summary } : null,
+    );
+    setUseSuggestedSummary(true);
+  }
+
+  function keepOriginalSummary(): void {
+    setStructuredCv((currentCv) =>
+      currentCv
+        ? { ...currentCv, summary: originalStructuredCv?.summary ?? null }
+        : null,
+    );
+    setUseSuggestedSummary(false);
+  }
+
   return (
     <main className="app-shell">
       <section className="hero">
@@ -159,7 +247,7 @@ function App() {
                   className={cvInputMode === "text" ? "active" : ""}
                   onClick={() => {
                     setCvInputMode("text");
-                    resetTailoring();
+                    resetResults();
                   }}
                 >
                   Paste Text
@@ -170,7 +258,7 @@ function App() {
                   className={cvInputMode === "pdf" ? "active" : ""}
                   onClick={() => {
                     setCvInputMode("pdf");
-                    resetTailoring();
+                    resetResults();
                   }}
                 >
                   Upload PDF
@@ -237,7 +325,7 @@ function App() {
                 value={cvText}
                 onChange={(event) => {
                   setCvText(event.target.value);
-                  resetTailoring();
+                  resetResults();
                 }}
                 placeholder="Paste your CV text here..."
                 aria-label="CV text"
@@ -255,7 +343,7 @@ function App() {
               value={jobDescription}
               onChange={(event) => {
                 setJobDescription(event.target.value);
-                resetTailoring();
+                resetResults();
               }}
               placeholder="Paste the complete job description here..."
               aria-label="Job description"
@@ -481,7 +569,7 @@ function App() {
                             ? "suggestion-button secondary"
                             : "suggestion-button"
                         }
-                        onClick={() => setUseSuggestedHeadline(true)}
+                        onClick={useTailoredHeadline}
                       >
                         Use suggestion
                       </button>
@@ -489,7 +577,7 @@ function App() {
                       <button
                         type="button"
                         className="suggestion-button secondary"
-                        onClick={() => setUseSuggestedHeadline(false)}
+                        onClick={keepOriginalHeadline}
                       >
                         Keep original
                       </button>
@@ -519,7 +607,7 @@ function App() {
                             ? "suggestion-button secondary"
                             : "suggestion-button"
                         }
-                        onClick={() => setUseSuggestedSummary(true)}
+                        onClick={useTailoredSummary}
                       >
                         Use suggestion
                       </button>
@@ -527,7 +615,7 @@ function App() {
                       <button
                         type="button"
                         className="suggestion-button secondary"
-                        onClick={() => setUseSuggestedSummary(false)}
+                        onClick={keepOriginalSummary}
                       >
                         Keep original
                       </button>
@@ -549,6 +637,21 @@ function App() {
             </section>
           )}
 
+          {structuredCv && (
+            <CvPreview
+              cv={structuredCv}
+              key={`${structuredCv.headline ?? ""}:${structuredCv.summary ?? ""}`}
+              onRewriteBullet={async ({ bullet, cvContext }) => {
+                const result = await rewriteBullet({
+                  bullet,
+                  cvContext,
+                  jobDescription,
+                });
+
+                return result.rewrittenBullet;
+              }}
+            />
+          )}
           <div className="result-panels">
             <details open>
               <summary>

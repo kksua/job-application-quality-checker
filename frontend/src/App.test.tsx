@@ -1,28 +1,39 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import App from "./App";
 import { analysePdfApplication, analyseTextApplication } from "./api/analysis";
-import { generateTailoringSuggestions } from "./api/tailoring";
+import { parseCv } from "./api/cv";
+import { generateTailoringSuggestions, rewriteBullet } from "./api/tailoring";
 import type { AnalysisResponse } from "./types/analysis";
+import type { StructuredCv } from "./types/cv";
 
 vi.mock("./api/analysis", () => ({
   analyseTextApplication: vi.fn(),
   analysePdfApplication: vi.fn(),
 }));
 
+vi.mock("./api/cv", () => ({
+  parseCv: vi.fn(),
+}));
+
 vi.mock("./api/tailoring", () => ({
   generateTailoringSuggestions: vi.fn(),
+  rewriteBullet: vi.fn(),
 }));
 
 const mockedAnalyseTextApplication = vi.mocked(analyseTextApplication);
 
 const mockedAnalysePdfApplication = vi.mocked(analysePdfApplication);
 
+const mockedParseCv = vi.mocked(parseCv);
+
 const mockedGenerateTailoringSuggestions = vi.mocked(
   generateTailoringSuggestions,
 );
+
+const mockedRewriteBullet = vi.mocked(rewriteBullet);
 
 const successfulAnalysis: AnalysisResponse = {
   matching_skills: ["fastapi", "postgresql", "python", "react"],
@@ -102,9 +113,64 @@ const regeneratedTailoring = {
     "full-stack developer.",
 };
 
+const successfulStructuredCv: StructuredCv = {
+  personalInfo: {
+    fullName: "Jane Doe",
+    email: "jane@example.com",
+    phone: "+33 7 49 14 96 78",
+    location: "Paris, France",
+    linkedin: null,
+    github: null,
+    portfolio: null,
+    photoUrl: null,
+  },
+  headline: "Software Engineering Graduate",
+  summary: "Software Engineering graduate with React and FastAPI experience.",
+  experience: [],
+  education: [],
+  projects: [],
+  skillGroups: [],
+  awards: [],
+  certifications: [],
+  languages: [],
+};
+
+const structuredCvWithBullets: StructuredCv = {
+  ...successfulStructuredCv,
+  experience: [
+    {
+      company: "Nova Digital",
+      jobTitle: "Frontend Developer Intern",
+      location: "Paris, France",
+      dates: {
+        startDate: "January 2025",
+        endDate: "June 2025",
+      },
+      bullets: ["Responsible for frontend tasks."],
+    },
+  ],
+  projects: [
+    {
+      name: "AI Resume Checker",
+      subtitle: "Full-stack CV analysis application",
+      organization: null,
+      location: null,
+      dates: {
+        startDate: "March 2026",
+        endDate: null,
+      },
+      description: null,
+      bullets: ["Built parser features."],
+      technologies: ["React", "FastAPI"],
+      url: null,
+    },
+  ],
+};
+
 describe("App", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockedParseCv.mockResolvedValue(successfulStructuredCv);
   });
 
   // Checks that the main application form and primary controls render.
@@ -433,8 +499,8 @@ describe("App", () => {
     });
   });
 
-  // Checks that the headline suggestion can be accepted and reverted.
-  test("accepts and clears the headline suggestion", async () => {
+  // Checks that headline and summary suggestions update the CV preview.
+  test("applies and restores AI suggestions in the CV preview", async () => {
     const user = userEvent.setup();
 
     mockedAnalyseTextApplication.mockResolvedValue(successfulAnalysis);
@@ -477,6 +543,13 @@ describe("App", () => {
       }),
     );
 
+    let preview = screen.getByRole("region", {
+      name: /cv preview/i,
+    });
+
+    expect(preview).toHaveTextContent(successfulStructuredCv.headline ?? "");
+    expect(preview).toHaveTextContent(successfulStructuredCv.summary ?? "");
+
     const useButtons = await screen.findAllByRole("button", {
       name: /use suggestion/i,
     });
@@ -484,6 +557,10 @@ describe("App", () => {
     await user.click(useButtons[0]);
 
     expect(screen.getByText(/accepted/i)).toBeInTheDocument();
+    preview = screen.getByRole("region", {
+      name: /cv preview/i,
+    });
+    expect(preview).toHaveTextContent(successfulTailoring.headline);
 
     const keepButtons = screen.getAllByRole("button", {
       name: /keep original/i,
@@ -492,6 +569,108 @@ describe("App", () => {
     await user.click(keepButtons[0]);
 
     expect(screen.queryByText(/accepted/i)).not.toBeInTheDocument();
+    preview = screen.getByRole("region", {
+      name: /cv preview/i,
+    });
+    expect(preview).toHaveTextContent(successfulStructuredCv.headline ?? "");
+
+    await user.click(useButtons[1]);
+
+    preview = screen.getByRole("region", {
+      name: /cv preview/i,
+    });
+    expect(within(preview).getByText(successfulTailoring.summary)).toBeVisible();
+
+    await user.click(keepButtons[1]);
+
+    preview = screen.getByRole("region", {
+      name: /cv preview/i,
+    });
+    expect(
+      within(preview).getByText(successfulStructuredCv.summary ?? ""),
+    ).toBeVisible();
+  });
+
+  // Checks that edit-mode bullet rewriting updates the selected CV bullet.
+  test("rewrites and accepts an experience bullet in edit mode", async () => {
+    const user = userEvent.setup();
+    const jobDescription =
+      "We are hiring a frontend developer with React and TypeScript experience for dashboard products.";
+
+    mockedAnalyseTextApplication.mockResolvedValue(successfulAnalysis);
+    mockedParseCv.mockResolvedValueOnce(structuredCvWithBullets);
+    mockedRewriteBullet.mockResolvedValueOnce({
+      rewrittenBullet:
+        "Built React frontend features for internal dashboard workflows.",
+    });
+
+    render(<App />);
+
+    await user.click(
+      screen.getByRole("button", {
+        name: /paste text/i,
+      }),
+    );
+
+    await user.type(
+      screen.getByRole("textbox", {
+        name: /cv text/i,
+      }),
+      "Frontend developer with React and TypeScript dashboard experience.",
+    );
+
+    await user.type(
+      screen.getByRole("textbox", {
+        name: /job description/i,
+      }),
+      jobDescription,
+    );
+
+    await user.click(
+      screen.getByRole("button", {
+        name: /analyse application/i,
+      }),
+    );
+
+    await screen.findByRole("region", {
+      name: /cv preview/i,
+    });
+
+    await user.click(
+      screen.getByRole("button", {
+        name: /^edit$/i,
+      }),
+    );
+
+    await user.click(
+      screen.getByRole("button", {
+        name: /rewrite bullet: responsible for frontend tasks/i,
+      }),
+    );
+
+    expect(mockedRewriteBullet).toHaveBeenCalledWith({
+      bullet: "Responsible for frontend tasks.",
+      cvContext: expect.stringContaining(
+        "Experience: Frontend Developer Intern at Nova Digital",
+      ),
+      jobDescription,
+    });
+
+    const preview = screen.getByRole("region", {
+      name: /cv preview/i,
+    });
+
+    expect(preview).toHaveTextContent("dashboard workflows");
+
+    await user.click(
+      screen.getByRole("button", {
+        name: /accept rewritten bullet/i,
+      }),
+    );
+
+    expect(preview).toHaveTextContent(
+      "Built React frontend features for internal dashboard workflows.",
+    );
   });
 
   // Checks that requesting another version calls AI again and updates the output.
@@ -606,7 +785,7 @@ describe("App", () => {
     expect(screen.getByText("Analysis complete")).toBeInTheDocument();
   });
 
-  // Checks that changing the CV removes stale AI suggestions.
+  // Checks that changing the CV removes stale AI suggestions and analysis state.
   test("resets AI suggestions when CV text changes", async () => {
     const user = userEvent.setup();
 
@@ -663,10 +842,10 @@ describe("App", () => {
     ).not.toBeInTheDocument();
 
     expect(
-      screen.getByRole("button", {
+      screen.queryByRole("button", {
         name: /tailor my cv with ai/i,
       }),
-    ).toBeInTheDocument();
+    ).not.toBeInTheDocument();
   });
 
   // Checks that AI tailoring remains hidden when the app is in PDF mode.

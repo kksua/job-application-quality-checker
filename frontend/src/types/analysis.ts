@@ -41,3 +41,7 @@ export interface TailoringResponse {
   headline: string;
   summary: string;
 }
+
+export interface BulletRewriteResponse {
+  rewrittenBullet: string;
+}
