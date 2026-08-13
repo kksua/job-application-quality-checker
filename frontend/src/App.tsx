@@ -1,8 +1,11 @@
 import { useRef, useState } from "react";
 
 import { analysePdfApplication, analyseTextApplication } from "./api/analysis";
+import { parseCv } from "./api/cv";
 import { generateTailoringSuggestions } from "./api/tailoring";
+import { CvPreview } from "./CvPreview";
 import type { AnalysisResponse, TailoringResponse } from "./types/analysis";
+import type { StructuredCv } from "./types/cv";
 
 import "./App.css";
 
@@ -19,7 +22,10 @@ function App() {
     null,
   );
 
+  const [structuredCv, setStructuredCv] = useState<StructuredCv | null>(null);
+
   const [isLoading, setIsLoading] = useState(false);
+
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const [tailoringResult, setTailoringResult] =
@@ -39,11 +45,18 @@ function App() {
 
   function handleFileChange(event: React.ChangeEvent<HTMLInputElement>): void {
     const file = event.target.files?.[0] ?? null;
+
     setSelectedFile(file);
+    setAnalysisResult(null);
+    setStructuredCv(null);
+    resetTailoring();
   }
 
   function removeFile(): void {
     setSelectedFile(null);
+    setAnalysisResult(null);
+    setStructuredCv(null);
+    resetTailoring();
 
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
@@ -57,9 +70,16 @@ function App() {
     setUseSuggestedSummary(false);
   }
 
+  function resetResults(): void {
+    setAnalysisResult(null);
+    setStructuredCv(null);
+    resetTailoring();
+  }
+
   async function handleAnalyse(): Promise<void> {
     setErrorMessage(null);
     setAnalysisResult(null);
+    setStructuredCv(null);
     resetTailoring();
 
     if (jobDescription.trim().length < 20) {
@@ -84,15 +104,34 @@ function App() {
     try {
       setIsLoading(true);
 
-      const result =
-        cvInputMode === "text"
-          ? await analyseTextApplication({
-              cvText,
-              jobDescription,
-            })
-          : await analysePdfApplication(selectedFile as File, jobDescription);
+      if (cvInputMode === "text") {
+        const result = await analyseTextApplication({
+          cvText,
+          jobDescription,
+        });
 
-      setAnalysisResult(result);
+        setAnalysisResult(result);
+
+        try {
+          const parsedCv = await parseCv({
+            cvText,
+            jobDescription,
+          });
+
+          setStructuredCv(parsedCv);
+        } catch (error) {
+          console.error("Structured CV parsing failed:", error);
+
+          setStructuredCv(null);
+        }
+      } else {
+        const result = await analysePdfApplication(
+          selectedFile as File,
+          jobDescription,
+        );
+
+        setAnalysisResult(result);
+      }
 
       window.setTimeout(() => {
         resultsRef.current?.scrollIntoView({
@@ -159,7 +198,7 @@ function App() {
                   className={cvInputMode === "text" ? "active" : ""}
                   onClick={() => {
                     setCvInputMode("text");
-                    resetTailoring();
+                    resetResults();
                   }}
                 >
                   Paste Text
@@ -170,7 +209,7 @@ function App() {
                   className={cvInputMode === "pdf" ? "active" : ""}
                   onClick={() => {
                     setCvInputMode("pdf");
-                    resetTailoring();
+                    resetResults();
                   }}
                 >
                   Upload PDF
@@ -237,7 +276,7 @@ function App() {
                 value={cvText}
                 onChange={(event) => {
                   setCvText(event.target.value);
-                  resetTailoring();
+                  resetResults();
                 }}
                 placeholder="Paste your CV text here..."
                 aria-label="CV text"
@@ -255,7 +294,7 @@ function App() {
               value={jobDescription}
               onChange={(event) => {
                 setJobDescription(event.target.value);
-                resetTailoring();
+                resetResults();
               }}
               placeholder="Paste the complete job description here..."
               aria-label="Job description"
@@ -549,6 +588,7 @@ function App() {
             </section>
           )}
 
+          {structuredCv && <CvPreview cv={structuredCv} />}
           <div className="result-panels">
             <details open>
               <summary>

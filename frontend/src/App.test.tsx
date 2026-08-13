@@ -4,12 +4,18 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import App from "./App";
 import { analysePdfApplication, analyseTextApplication } from "./api/analysis";
+import { parseCv } from "./api/cv";
 import { generateTailoringSuggestions } from "./api/tailoring";
 import type { AnalysisResponse } from "./types/analysis";
+import type { StructuredCv } from "./types/cv";
 
 vi.mock("./api/analysis", () => ({
   analyseTextApplication: vi.fn(),
   analysePdfApplication: vi.fn(),
+}));
+
+vi.mock("./api/cv", () => ({
+  parseCv: vi.fn(),
 }));
 
 vi.mock("./api/tailoring", () => ({
@@ -19,6 +25,8 @@ vi.mock("./api/tailoring", () => ({
 const mockedAnalyseTextApplication = vi.mocked(analyseTextApplication);
 
 const mockedAnalysePdfApplication = vi.mocked(analysePdfApplication);
+
+const mockedParseCv = vi.mocked(parseCv);
 
 const mockedGenerateTailoringSuggestions = vi.mocked(
   generateTailoringSuggestions,
@@ -102,9 +110,32 @@ const regeneratedTailoring = {
     "full-stack developer.",
 };
 
+const successfulStructuredCv: StructuredCv = {
+  personalInfo: {
+    fullName: "Jane Doe",
+    email: "jane@example.com",
+    phone: "+33 7 49 14 96 78",
+    location: "Paris, France",
+    linkedin: null,
+    github: null,
+    portfolio: null,
+    photoUrl: null,
+  },
+  headline: "Software Engineering Graduate",
+  summary: "Software Engineering graduate with React and FastAPI experience.",
+  experience: [],
+  education: [],
+  projects: [],
+  skillGroups: [],
+  awards: [],
+  certifications: [],
+  languages: [],
+};
+
 describe("App", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockedParseCv.mockResolvedValue(successfulStructuredCv);
   });
 
   // Checks that the main application form and primary controls render.
@@ -606,7 +637,7 @@ describe("App", () => {
     expect(screen.getByText("Analysis complete")).toBeInTheDocument();
   });
 
-  // Checks that changing the CV removes stale AI suggestions.
+  // Checks that changing the CV removes stale AI suggestions and analysis state.
   test("resets AI suggestions when CV text changes", async () => {
     const user = userEvent.setup();
 
@@ -663,10 +694,10 @@ describe("App", () => {
     ).not.toBeInTheDocument();
 
     expect(
-      screen.getByRole("button", {
+      screen.queryByRole("button", {
         name: /tailor my cv with ai/i,
       }),
-    ).toBeInTheDocument();
+    ).not.toBeInTheDocument();
   });
 
   // Checks that AI tailoring remains hidden when the app is in PDF mode.
