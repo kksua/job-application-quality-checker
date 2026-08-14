@@ -38,6 +38,8 @@ body {
   line-height: 1.48;
   page-break-after: always;
   break-after: page;
+  overflow-wrap: anywhere;
+  word-break: normal;
 }
 
 .cv-preview-page:last-child {
@@ -64,6 +66,7 @@ body {
   font-weight: 500;
   line-height: 1;
   letter-spacing: 0;
+  overflow-wrap: anywhere;
 }
 
 .cv-preview-header p {
@@ -74,6 +77,7 @@ body {
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+  overflow-wrap: anywhere;
 }
 
 .cv-preview-header ul {
@@ -137,6 +141,7 @@ body {
   font-family: Arial, Helvetica, sans-serif;
   font-size: 0.96rem;
   line-height: 1.28;
+  overflow-wrap: anywhere;
 }
 
 .cv-preview-entry-heading p {
@@ -144,6 +149,7 @@ body {
   color: #4b5263;
   font-family: Arial, Helvetica, sans-serif;
   font-size: 0.82rem;
+  overflow-wrap: anywhere;
 }
 
 .cv-preview-entry-heading span {
@@ -154,6 +160,7 @@ body {
   font-size: 0.72rem;
   line-height: 1.35;
   text-align: right;
+  overflow-wrap: anywhere;
 }
 
 .cv-preview-meta {
@@ -177,6 +184,7 @@ body {
 
 .cv-preview-entry li {
   padding-left: 2px;
+  overflow-wrap: anywhere;
 }
 
 .cv-preview-bullet-row {
@@ -187,6 +195,11 @@ body {
   display: inline;
   min-width: 1ch;
   outline: 0;
+}
+
+.cv-preview-link {
+  color: inherit;
+  text-decoration: none;
 }
 
 .cv-preview-compact-list {
@@ -200,6 +213,7 @@ body {
   color: #4b5263;
   font-family: Arial, Helvetica, sans-serif;
   font-size: 0.78rem;
+  overflow-wrap: anywhere;
 }
 
 .cv-preview-compact-line strong {
@@ -207,6 +221,44 @@ body {
   font-size: 0.76rem;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+
+.cv-preview-pages-dense .cv-preview-page {
+  padding: 12.7mm 14.82mm;
+  font-size: 0.84rem;
+  line-height: 1.38;
+}
+
+.cv-preview-pages-dense .cv-preview-header {
+  gap: 24px;
+  padding-bottom: 18px;
+}
+
+.cv-preview-pages-dense .cv-preview-header h2 {
+  font-size: 2rem;
+}
+
+.cv-preview-pages-dense .cv-preview-section {
+  margin-top: 18px;
+}
+
+.cv-preview-pages-dense .cv-preview-section h3 {
+  margin-bottom: 9px;
+  padding-bottom: 5px;
+}
+
+.cv-preview-pages-dense .cv-preview-entry-list {
+  gap: 11px;
+}
+
+.cv-preview-pages-dense .cv-preview-entry ul {
+  gap: 2px;
+  margin-top: 6px;
+}
+
+.cv-preview-pages-dense .cv-preview-columns {
+  gap: 30px;
 }
 
 .cv-bullet-ai-button,
@@ -215,6 +267,7 @@ body {
 }
 `;
 
+// Clones only the printable CV pages and strips edit-only controls before export.
 function cleanPreviewElement(previewElement: HTMLElement): HTMLElement {
   const clone = previewElement.cloneNode(true) as HTMLElement;
 
@@ -225,7 +278,9 @@ function cleanPreviewElement(previewElement: HTMLElement): HTMLElement {
     element.removeAttribute("contenteditable");
     element.removeAttribute("suppresscontenteditablewarning");
   });
-  clone.className = "cv-export-pages";
+  clone.className = previewElement.classList.contains("cv-preview-pages-dense")
+    ? "cv-export-pages cv-preview-pages-dense"
+    : "cv-export-pages";
 
   return clone;
 }
@@ -244,6 +299,7 @@ function exportHtml(previewElement: HTMLElement): string {
 </html>`;
 }
 
+// Prints the same A4 preview markup from an isolated iframe so exported PDFs match the UI.
 export function exportPreviewPdf(previewElement: HTMLElement): void {
   const frame = document.createElement("iframe");
 

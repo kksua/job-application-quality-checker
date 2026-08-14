@@ -167,6 +167,94 @@ const structuredCvWithBullets: StructuredCv = {
   ],
 };
 
+const weirdStructuredCv = {
+  personalInfo: {
+    fullName: "Long URL Candidate",
+    email: "long@example.com",
+    phone: null,
+    location: null,
+    linkedin:
+      "https://www.linkedin.com/in/this-is-an-extremely-long-profile-url-that-should-wrap-without-breaking-the-a4-preview-layout",
+    github: null,
+    portfolio:
+      "https://portfolio.example.com/projects/some-very-long-project-slug-that-keeps-going-and-going-and-should-not-overflow-the-page",
+    photoUrl: null,
+  },
+  headline:
+    "Full-Stack Software Engineering Graduate With A Very Long Headline Covering React TypeScript FastAPI PostgreSQL Cloud APIs Automation Developer Experience And Product Delivery",
+  summary: "Builds full-stack applications and parser tooling.",
+  experience: [
+    {
+      company: "Duplicate Company",
+      jobTitle: "Software Engineer",
+      location: "Paris, France",
+      dates: {
+        startDate: "2025",
+        endDate: null,
+      },
+      bullets: Array.from(
+        { length: 18 },
+        () =>
+          "Built the same repeated bullet with a veryveryveryveryverylongtoken that must wrap correctly.",
+      ),
+    },
+    {
+      company: "Duplicate Company",
+      jobTitle: "Software Engineer",
+      location: "Paris, France",
+      dates: {
+        startDate: "2025",
+        endDate: null,
+      },
+      bullets: null,
+    },
+  ],
+  education: null,
+  projects: [
+    {
+      name: "Duplicate Project",
+      subtitle: null,
+      organization: null,
+      location: null,
+      dates: {
+        startDate: "2026",
+        endDate: null,
+      },
+      description: null,
+      bullets: ["Repeated project bullet.", "Repeated project bullet."],
+      technologies: ["React", "React"],
+      url: "https://github.com/example/really-really-really-long-repository-name-that-needs-wrapping",
+    },
+    {
+      name: "Duplicate Project",
+      subtitle: null,
+      organization: null,
+      location: null,
+      dates: {
+        startDate: "2026",
+        endDate: null,
+      },
+      description: null,
+      bullets: ["Repeated project bullet."],
+      technologies: null,
+      url: null,
+    },
+  ],
+  skillGroups: [
+    {
+      category: "Tools",
+      skills: ["Docker", "Docker"],
+    },
+    {
+      category: "Tools",
+      skills: null,
+    },
+  ],
+  awards: [],
+  certifications: [],
+  languages: [],
+} as unknown as StructuredCv;
+
 describe("App", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -348,6 +436,132 @@ describe("App", () => {
     expect(screen.getByText("fastapi")).toBeInTheDocument();
 
     expect(screen.getByText("docker")).toBeInTheDocument();
+  });
+
+  // Checks that structured parser failures are visible without blocking results.
+  test("shows a structured CV parser failure message", async () => {
+    const user = userEvent.setup();
+    const consoleErrorSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+
+    mockedAnalyseTextApplication.mockResolvedValue(successfulAnalysis);
+    mockedParseCv.mockRejectedValueOnce(
+      new Error("The structured parser failed."),
+    );
+
+    render(<App />);
+
+    await user.click(
+      screen.getByRole("button", {
+        name: /paste text/i,
+      }),
+    );
+
+    await user.type(
+      screen.getByRole("textbox", {
+        name: /cv text/i,
+      }),
+      "Software Engineering graduate with React, TypeScript, FastAPI and PostgreSQL experience.",
+    );
+
+    await user.type(
+      screen.getByRole("textbox", {
+        name: /job description/i,
+      }),
+      "We are hiring a Junior Full-Stack Developer with React, TypeScript and FastAPI experience.",
+    );
+
+    await user.click(
+      screen.getByRole("button", {
+        name: /analyse application/i,
+      }),
+    );
+
+    expect(await screen.findByText("Analysis complete")).toBeInTheDocument();
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "We analysed your application, but could not build the editable CV preview from this CV text.",
+    );
+
+    expect(
+      screen.queryByRole("region", {
+        name: /cv preview/i,
+      }),
+    ).not.toBeInTheDocument();
+
+    consoleErrorSpy.mockRestore();
+  });
+
+  // Checks messy parser output does not crash or create duplicate-key warnings.
+  test("handles long CV content and weird parser output in the preview", async () => {
+    const user = userEvent.setup();
+    const consoleErrorSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+
+    mockedAnalyseTextApplication.mockResolvedValue(successfulAnalysis);
+    mockedParseCv.mockResolvedValueOnce(weirdStructuredCv);
+
+    render(<App />);
+
+    await user.click(
+      screen.getByRole("button", {
+        name: /paste text/i,
+      }),
+    );
+
+    await user.type(
+      screen.getByRole("textbox", {
+        name: /cv text/i,
+      }),
+      "Software Engineering graduate with React, TypeScript, FastAPI and PostgreSQL experience.",
+    );
+
+    await user.type(
+      screen.getByRole("textbox", {
+        name: /job description/i,
+      }),
+      "We are hiring a Junior Full-Stack Developer with React, TypeScript and FastAPI experience.",
+    );
+
+    await user.click(
+      screen.getByRole("button", {
+        name: /analyse application/i,
+      }),
+    );
+
+    const preview = await screen.findByRole("region", {
+      name: /cv preview/i,
+    });
+
+    expect(preview).toHaveTextContent("Long URL Candidate");
+    expect(preview).toHaveTextContent(
+      "this-is-an-extremely-long-profile-url",
+    );
+    expect(
+      within(preview).getByRole("link", {
+        name: /long@example\.com/i,
+      }),
+    ).toHaveAttribute("href", "mailto:long@example.com");
+    expect(
+      within(preview).getByRole("link", {
+        name: /this-is-an-extremely-long-profile-url/i,
+      }),
+    ).toHaveAttribute("href", weirdStructuredCv.personalInfo.linkedin);
+    expect(
+      within(preview).getByRole("link", {
+        name: /portfolio\.example\.com/i,
+      }),
+    ).toHaveAttribute("href", weirdStructuredCv.personalInfo.portfolio);
+    expect(preview.querySelector(".cv-preview-pages-dense")).not.toBeNull();
+    expect(
+      consoleErrorSpy.mock.calls.some((call) =>
+        String(call[0]).includes("Encountered two children with the same key"),
+      ),
+    ).toBe(false);
+
+    consoleErrorSpy.mockRestore();
   });
 
   // Checks that backend analysis errors are shown to the user.
@@ -722,6 +936,9 @@ describe("App", () => {
     expect(exportFrame?.contentDocument?.body.innerHTML).toContain(
       "cv-preview-page",
     );
+    expect(exportFrame?.contentDocument?.body.innerHTML).toContain(
+      'href="mailto:jane@example.com"',
+    );
   });
 
   // Checks that requesting another version calls AI again and updates the output.
@@ -897,6 +1114,61 @@ describe("App", () => {
         name: /tailor my cv with ai/i,
       }),
     ).not.toBeInTheDocument();
+  });
+
+  // Checks that stale parser messages are cleared after input changes.
+  test("clears parser messages when CV text changes", async () => {
+    const user = userEvent.setup();
+    const consoleErrorSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+
+    mockedAnalyseTextApplication.mockResolvedValue(successfulAnalysis);
+    mockedParseCv.mockRejectedValueOnce(
+      new Error("The structured parser failed."),
+    );
+
+    render(<App />);
+
+    await user.click(
+      screen.getByRole("button", {
+        name: /paste text/i,
+      }),
+    );
+
+    const cvTextarea = screen.getByRole("textbox", {
+      name: /cv text/i,
+    });
+
+    await user.type(
+      cvTextarea,
+      "Software Engineering graduate with React, TypeScript, FastAPI and PostgreSQL experience.",
+    );
+
+    await user.type(
+      screen.getByRole("textbox", {
+        name: /job description/i,
+      }),
+      "We are hiring a Junior Full-Stack Developer with React, TypeScript and FastAPI experience.",
+    );
+
+    await user.click(
+      screen.getByRole("button", {
+        name: /analyse application/i,
+      }),
+    );
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "could not build the editable CV preview",
+    );
+
+    await user.type(cvTextarea, " Updated");
+
+    expect(
+      screen.queryByText(/could not build the editable cv preview/i),
+    ).not.toBeInTheDocument();
+
+    consoleErrorSpy.mockRestore();
   });
 
   // Checks that AI tailoring remains hidden when the app is in PDF mode.

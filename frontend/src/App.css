@@ -738,6 +738,28 @@ button {
   padding: 28px 0 8px;
 }
 
+.cv-preview-empty {
+  display: grid;
+  gap: 8px;
+  margin-top: 34px;
+  padding: 24px;
+  background: rgba(238, 235, 246, 0.5);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+}
+
+.cv-preview-empty h2 {
+  margin: 0;
+  color: var(--text);
+  font-size: 1.05rem;
+}
+
+.cv-preview-empty p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
 .cv-preview-pages {
   display: grid;
   gap: 28px;
@@ -788,6 +810,8 @@ button {
   font-size: 0.92rem;
   line-height: 1.48;
   scroll-snap-align: start;
+  overflow-wrap: anywhere;
+  word-break: normal;
 }
 
 .cv-preview-editable {
@@ -799,6 +823,15 @@ button {
 .cv-preview-editable:focus {
   background: rgba(155, 143, 224, 0.16);
   box-shadow: 0 0 0 3px rgba(108, 95, 199, 0.14);
+}
+
+.cv-preview-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.cv-preview-link:hover {
+  text-decoration: underline;
 }
 
 .cv-preview-pages-paged .cv-preview-page {
@@ -820,10 +853,11 @@ button {
 .cv-preview-header h2 {
   margin: 0;
   color: #111522;
-  font-size: 2.45rem;
+  font-size: clamp(1.78rem, 2.45rem, 2.45rem);
   font-weight: 500;
   line-height: 1;
   letter-spacing: 0;
+  overflow-wrap: anywhere;
 }
 
 .cv-preview-header p {
@@ -834,6 +868,7 @@ button {
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+  overflow-wrap: anywhere;
 }
 
 .cv-preview-header ul {
@@ -897,6 +932,7 @@ button {
   font-family: Arial, Helvetica, sans-serif;
   font-size: 0.96rem;
   line-height: 1.28;
+  overflow-wrap: anywhere;
 }
 
 .cv-preview-entry-heading p {
@@ -904,6 +940,7 @@ button {
   color: #4b5263;
   font-family: Arial, Helvetica, sans-serif;
   font-size: 0.82rem;
+  overflow-wrap: anywhere;
 }
 
 .cv-preview-entry-heading span {
@@ -914,6 +951,7 @@ button {
   font-size: 0.72rem;
   line-height: 1.35;
   text-align: right;
+  overflow-wrap: anywhere;
 }
 
 .cv-preview-meta {
@@ -937,6 +975,7 @@ button {
 
 .cv-preview-entry li {
   padding-left: 2px;
+  overflow-wrap: anywhere;
 }
 
 .cv-preview-bullet-row {
@@ -1051,6 +1090,7 @@ button {
   color: #4b5263;
   font-family: Arial, Helvetica, sans-serif;
   font-size: 0.78rem;
+  overflow-wrap: anywhere;
 }
 
 .cv-preview-compact-line strong {
@@ -1058,6 +1098,44 @@ button {
   font-size: 0.76rem;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+
+.cv-preview-pages-dense .cv-preview-page {
+  padding: 48px 56px;
+  font-size: 0.84rem;
+  line-height: 1.38;
+}
+
+.cv-preview-pages-dense .cv-preview-header {
+  gap: 24px;
+  padding-bottom: 18px;
+}
+
+.cv-preview-pages-dense .cv-preview-header h2 {
+  font-size: 2rem;
+}
+
+.cv-preview-pages-dense .cv-preview-section {
+  margin-top: 18px;
+}
+
+.cv-preview-pages-dense .cv-preview-section h3 {
+  margin-bottom: 9px;
+  padding-bottom: 5px;
+}
+
+.cv-preview-pages-dense .cv-preview-entry-list {
+  gap: 11px;
+}
+
+.cv-preview-pages-dense .cv-preview-entry ul {
+  gap: 2px;
+  margin-top: 6px;
+}
+
+.cv-preview-pages-dense .cv-preview-columns {
+  gap: 30px;
 }
 
 @media (max-width: 900px) {

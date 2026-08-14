@@ -27,6 +27,10 @@ function App() {
   const [originalStructuredCv, setOriginalStructuredCv] =
     useState<StructuredCv | null>(null);
 
+  const [parserMessage, setParserMessage] = useState<string | null>(null);
+
+  const [parserMessageIsError, setParserMessageIsError] = useState(false);
+
   const [isLoading, setIsLoading] = useState(false);
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -53,6 +57,8 @@ function App() {
     setAnalysisResult(null);
     setStructuredCv(null);
     setOriginalStructuredCv(null);
+    setParserMessage(null);
+    setParserMessageIsError(false);
     resetTailoring();
   }
 
@@ -61,6 +67,8 @@ function App() {
     setAnalysisResult(null);
     setStructuredCv(null);
     setOriginalStructuredCv(null);
+    setParserMessage(null);
+    setParserMessageIsError(false);
     resetTailoring();
 
     if (fileInputRef.current) {
@@ -79,6 +87,8 @@ function App() {
     setAnalysisResult(null);
     setStructuredCv(null);
     setOriginalStructuredCv(null);
+    setParserMessage(null);
+    setParserMessageIsError(false);
     resetTailoring();
   }
 
@@ -87,6 +97,8 @@ function App() {
     setAnalysisResult(null);
     setStructuredCv(null);
     setOriginalStructuredCv(null);
+    setParserMessage(null);
+    setParserMessageIsError(false);
     resetTailoring();
 
     if (jobDescription.trim().length < 20) {
@@ -127,11 +139,17 @@ function App() {
 
           setStructuredCv(parsedCv);
           setOriginalStructuredCv(parsedCv);
+          setParserMessage(null);
+          setParserMessageIsError(false);
         } catch (error) {
           console.error("Structured CV parsing failed:", error);
 
           setStructuredCv(null);
           setOriginalStructuredCv(null);
+          setParserMessage(
+            "We analysed your application, but could not build the editable CV preview from this CV text.",
+          );
+          setParserMessageIsError(true);
         }
       } else {
         const result = await analysePdfApplication(
@@ -140,6 +158,10 @@ function App() {
         );
 
         setAnalysisResult(result);
+        setParserMessage(
+          "Structured CV preview is available for pasted CV text. PDF uploads can still be analysed below.",
+        );
+        setParserMessageIsError(false);
       }
 
       window.setTimeout(() => {
@@ -637,7 +659,7 @@ function App() {
             </section>
           )}
 
-          {structuredCv && (
+          {structuredCv ? (
             <CvPreview
               cv={structuredCv}
               key={`${structuredCv.headline ?? ""}:${structuredCv.summary ?? ""}`}
@@ -651,6 +673,18 @@ function App() {
                 return result.rewrittenBullet;
               }}
             />
+          ) : (
+            <section
+              className="cv-preview-empty"
+              role={parserMessageIsError ? "alert" : "status"}
+            >
+              <h2>Structured CV preview unavailable</h2>
+
+              <p>
+                {parserMessage ??
+                  "No editable CV preview is available for this analysis."}
+              </p>
+            </section>
           )}
           <div className="result-panels">
             <details open>

@@ -62,6 +62,199 @@ interface DiffWord {
   value: string;
 }
 
+const LINK_PATTERN = /(https?:\/\/[^\s|]+|www\.[^\s|]+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})/gi;
+
+function linkHref(value: string): string {
+  if (value.includes("@") && !value.toLowerCase().startsWith("http")) {
+    return `mailto:${value}`;
+  }
+
+  if (value.toLowerCase().startsWith("www.")) {
+    return `https://${value}`;
+  }
+
+  return value;
+}
+
+function LinkifiedText({
+  className,
+  value,
+}: {
+  className?: string;
+  value: string | null;
+}) {
+  if (!value) {
+    return <span className={className}>{value}</span>;
+  }
+
+  const parts: ReactNode[] = [];
+  let lastIndex = 0;
+
+  value.replace(LINK_PATTERN, (match, _captured: string, offset: number) => {
+    if (offset > lastIndex) {
+      parts.push(value.slice(lastIndex, offset));
+    }
+
+    parts.push(
+      <a
+        className="cv-preview-link"
+        href={linkHref(match)}
+        key={`${match}-${offset}`}
+        rel="noreferrer"
+        target="_blank"
+      >
+        {match}
+      </a>,
+    );
+    lastIndex = offset + match.length;
+
+    return match;
+  });
+
+  if (lastIndex < value.length) {
+    parts.push(value.slice(lastIndex));
+  }
+
+  return <span className={className}>{parts}</span>;
+}
+
+// Coerces malformed parser fields into safe strings for rendering.
+function textOrNull(value: unknown): string | null {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function textOrFallback(value: unknown, fallback: string): string {
+  return textOrNull(value) ?? fallback;
+}
+
+function listOfText(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value
+        .map((item) => textOrNull(item))
+        .filter((item): item is string => item !== null)
+    : [];
+}
+
+function listOfObjects<T>(value: unknown, mapper: (item: unknown) => T): T[] {
+  return Array.isArray(value) ? value.map(mapper) : [];
+}
+
+function record(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object"
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
+function normalizeDates(value: unknown): DateRange {
+  const source = record(value);
+
+  return {
+    startDate: textOrNull(source.startDate),
+    endDate: textOrNull(source.endDate),
+  };
+}
+
+// Shields the preview from partial or weird parser output without changing backend schemas.
+function normalizeStructuredCv(cv: StructuredCv): StructuredCv {
+  const source = record(cv);
+  const personalInfo = record(source.personalInfo);
+
+  return {
+    personalInfo: {
+      fullName: textOrNull(personalInfo.fullName),
+      email: textOrNull(personalInfo.email),
+      phone: textOrNull(personalInfo.phone),
+      location: textOrNull(personalInfo.location),
+      linkedin: textOrNull(personalInfo.linkedin),
+      github: textOrNull(personalInfo.github),
+      portfolio: textOrNull(personalInfo.portfolio),
+      photoUrl: textOrNull(personalInfo.photoUrl),
+    },
+    headline: textOrNull(source.headline),
+    summary: textOrNull(source.summary),
+    experience: listOfObjects(source.experience, (item) => {
+      const entry = record(item);
+
+      return {
+        company: textOrFallback(entry.company, "Unknown company"),
+        jobTitle: textOrFallback(entry.jobTitle, "Untitled role"),
+        location: textOrNull(entry.location),
+        dates: normalizeDates(entry.dates),
+        bullets: listOfText(entry.bullets),
+      };
+    }),
+    education: listOfObjects(source.education, (item) => {
+      const entry = record(item);
+
+      return {
+        institution: textOrFallback(entry.institution, "Unknown institution"),
+        degree: textOrFallback(entry.degree, "Untitled education"),
+        fieldOfStudy: textOrNull(entry.fieldOfStudy),
+        location: textOrNull(entry.location),
+        dates: normalizeDates(entry.dates),
+        description: textOrNull(entry.description),
+        details: listOfText(entry.details),
+      };
+    }),
+    projects: listOfObjects(source.projects, (item) => {
+      const entry = record(item);
+
+      return {
+        name: textOrFallback(entry.name, "Untitled project"),
+        subtitle: textOrNull(entry.subtitle),
+        organization: textOrNull(entry.organization),
+        location: textOrNull(entry.location),
+        dates: normalizeDates(entry.dates),
+        description: textOrNull(entry.description),
+        bullets: listOfText(entry.bullets),
+        technologies: listOfText(entry.technologies),
+        url: textOrNull(entry.url),
+      };
+    }),
+    skillGroups: listOfObjects(source.skillGroups, (item) => {
+      const entry = record(item);
+
+      return {
+        category: textOrFallback(entry.category, "Skills"),
+        skills: listOfText(entry.skills),
+      };
+    }).filter((item) => item.skills.length > 0),
+    awards: listOfObjects(source.awards, (item) => {
+      const entry = record(item);
+
+      return {
+        title: textOrFallback(entry.title, "Untitled award"),
+        organization: textOrNull(entry.organization),
+        date: textOrNull(entry.date),
+        placement: textOrNull(entry.placement),
+        description: textOrNull(entry.description),
+        bullets: listOfText(entry.bullets),
+      };
+    }),
+    certifications: listOfObjects(source.certifications, (item) => {
+      const entry = record(item);
+
+      return {
+        name: textOrFallback(entry.name, "Untitled certification"),
+        issuer: textOrNull(entry.issuer),
+        date: textOrNull(entry.date),
+        credentialId: textOrNull(entry.credentialId),
+        url: textOrNull(entry.url),
+      };
+    }),
+    languages: listOfObjects(source.languages, (item) => {
+      const entry = record(item);
+
+      return {
+        language: textOrFallback(entry.language, "Language"),
+        proficiency: textOrNull(entry.proficiency),
+        certification: textOrNull(entry.certification),
+        score: textOrNull(entry.score),
+      };
+    }),
+  };
+}
+
 function formatDateRange(dates: DateRange): string | null {
   if (!dates.startDate) {
     return null;
@@ -90,7 +283,7 @@ function EditableText({
   value,
 }: EditableTextProps) {
   if (!editMode) {
-    return <span className={className}>{value}</span>;
+    return <LinkifiedText className={className} value={value} />;
   }
 
   return (
@@ -129,8 +322,10 @@ function hasAnyContent(items: unknown[]): boolean {
 function cvContentWeight(cv: StructuredCv): number {
   return (
     cv.experience.length * 3 +
+    cv.experience.reduce((total, item) => total + item.bullets.length, 0) +
     cv.education.length * 2 +
     cv.projects.length * 3 +
+    cv.projects.reduce((total, item) => total + item.bullets.length, 0) +
     cv.skillGroups.length +
     cv.languages.length +
     cv.awards.length * 2 +
@@ -140,6 +335,11 @@ function cvContentWeight(cv: StructuredCv): number {
 
 function shouldUseSecondPage(cv: StructuredCv): boolean {
   return cvContentWeight(cv) >= 14;
+}
+
+// Switches crowded CVs to a tighter layout before content spills out of A4 pages.
+function shouldUseDenseLayout(cv: StructuredCv): boolean {
+  return cvContentWeight(cv) >= 28;
 }
 
 function compactLines(lines: Array<string | null | undefined>): string {
@@ -408,7 +608,7 @@ function ExperienceEntry({
       {item.bullets.length > 0 && (
         <ul>
           {item.bullets.map((bullet, index) => (
-            <li key={`${bullet}-${index}`}>
+            <li key={`experience-bullet-${entryIndex}-${index}`}>
               <div className="cv-preview-bullet-row">
                 <EditableText
                   editMode={editMode}
@@ -526,7 +726,7 @@ function EducationEntry({
       {item.details.length > 0 && (
         <ul>
           {item.details.map((detail, index) => (
-            <li key={`${detail}-${index}`}>
+            <li key={`education-detail-${index}`}>
               <EditableText
                 editMode={editMode}
                 onChange={(value) => {
@@ -640,7 +840,7 @@ function ProjectEntry({
       {item.bullets.length > 0 && (
         <ul>
           {item.bullets.map((bullet, index) => (
-            <li key={`${bullet}-${index}`}>
+            <li key={`project-bullet-${projectIndex}-${index}`}>
               <div className="cv-preview-bullet-row">
                 <EditableText
                   editMode={editMode}
@@ -818,7 +1018,7 @@ function AwardEntry({
       {item.bullets.length > 0 && (
         <ul>
           {item.bullets.map((bullet, index) => (
-            <li key={`${bullet}-${index}`}>
+            <li key={`award-bullet-${index}`}>
               <EditableText
                 editMode={editMode}
                 onChange={(value) => {
@@ -890,13 +1090,14 @@ function CertificationEntry({
 }
 
 export function CvPreview({ cv, onRewriteBullet }: CvPreviewProps) {
-  const [editableCv, setEditableCv] = useState(cv);
+  const [editableCv, setEditableCv] = useState(() => normalizeStructuredCv(cv));
   const [editMode, setEditMode] = useState(false);
   const [activeRewrite, setActiveRewrite] =
     useState<ActiveBulletRewrite | null>(null);
   const previewPagesRef = useRef<HTMLDivElement | null>(null);
   const contacts = contactItems(editableCv);
   const useSecondPage = shouldUseSecondPage(editableCv);
+  const useDenseLayout = shouldUseDenseLayout(editableCv);
 
   function updateCv(nextCv: StructuredCv): void {
     setEditableCv(nextCv);
@@ -956,7 +1157,7 @@ export function CvPreview({ cv, onRewriteBullet }: CvPreviewProps) {
                 <EducationEntry
                   editMode={editMode}
                   item={item}
-                  key={`${item.institution}-${item.degree}-${index}`}
+                  key={`education-${index}`}
                   onChange={(nextItem) => {
                     const education = [...editableCv.education];
                     education[index] = nextItem;
@@ -976,7 +1177,7 @@ export function CvPreview({ cv, onRewriteBullet }: CvPreviewProps) {
                   activeRewrite={activeRewrite}
                   editMode={editMode}
                   item={item}
-                  key={`${item.name}-${index}`}
+                  key={`project-${index}`}
                   onAcceptRewrite={clearRewrite}
                   onChange={(nextItem) => {
                     const projects = [...editableCv.projects];
@@ -999,7 +1200,7 @@ export function CvPreview({ cv, onRewriteBullet }: CvPreviewProps) {
                 <AwardEntry
                   editMode={editMode}
                   item={item}
-                  key={`${item.title}-${index}`}
+                  key={`award-${index}`}
                   onChange={(nextItem) => {
                     const awards = [...editableCv.awards];
                     awards[index] = nextItem;
@@ -1020,7 +1221,7 @@ export function CvPreview({ cv, onRewriteBullet }: CvPreviewProps) {
                 <SkillGroupEntry
                   editMode={editMode}
                   item={item}
-                  key={`${item.category}-${index}`}
+                  key={`skill-group-${index}`}
                   onChange={(nextItem) => {
                     const skillGroups = [...editableCv.skillGroups];
                     skillGroups[index] = nextItem;
@@ -1039,7 +1240,7 @@ export function CvPreview({ cv, onRewriteBullet }: CvPreviewProps) {
                 <LanguageEntry
                   editMode={editMode}
                   item={item}
-                  key={`${item.language}-${index}`}
+                  key={`language-${index}`}
                   onChange={(nextItem) => {
                     const languages = [...editableCv.languages];
                     languages[index] = nextItem;
@@ -1058,7 +1259,7 @@ export function CvPreview({ cv, onRewriteBullet }: CvPreviewProps) {
                 <CertificationEntry
                   editMode={editMode}
                   item={item}
-                  key={`${item.name}-${index}`}
+                  key={`certification-${index}`}
                   onChange={(nextItem) => {
                     const certifications = [...editableCv.certifications];
                     certifications[index] = nextItem;
@@ -1079,7 +1280,7 @@ export function CvPreview({ cv, onRewriteBullet }: CvPreviewProps) {
         ref={previewPagesRef}
         className={`cv-preview-pages ${
           useSecondPage ? "cv-preview-pages-paged" : ""
-        }`}
+        } ${useDenseLayout ? "cv-preview-pages-dense" : ""}`}
       >
         <article className="cv-preview-page">
           <header className="cv-preview-header">
@@ -1164,7 +1365,7 @@ export function CvPreview({ cv, onRewriteBullet }: CvPreviewProps) {
                     entryIndex={index}
                     editMode={editMode}
                     item={item}
-                    key={`${item.company}-${item.jobTitle}-${index}`}
+                    key={`experience-${index}`}
                     onAcceptRewrite={clearRewrite}
                     onChange={(nextItem) => {
                       const experience = [...editableCv.experience];
