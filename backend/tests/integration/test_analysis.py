@@ -6,7 +6,7 @@ client = TestClient(app)
 
 def test_analysis_endpoint_returns_skill_analysis() -> None:
     response = client.post(
-        "/analysis",
+        "/api/analysis",
         json={
             "cv_text": ("Python developer with React and PostgreSQL experience."),
             "job_description": (
@@ -45,7 +45,7 @@ def test_analysis_endpoint_returns_skill_analysis() -> None:
 
 def test_analysis_endpoint_rejects_short_cv_text() -> None:
     response = client.post(
-        "/analysis",
+        "/api/analysis",
         json={
             "cv_text": "Python",
             "job_description": ("We need a Python developer with FastAPI experience."),
@@ -57,7 +57,7 @@ def test_analysis_endpoint_rejects_short_cv_text() -> None:
 
 def test_analysis_endpoint_detects_text_quality_problems() -> None:
     response = client.post(
-        "/analysis",
+        "/api/analysis",
         json={
             "cv_text": (
                 "I am a hard-working team player. I worked on Python "
@@ -82,7 +82,7 @@ def test_analysis_endpoint_detects_text_quality_problems() -> None:
 
 def test_analysis_endpoint_returns_bullet_issues() -> None:
     response = client.post(
-        "/analysis",
+        "/api/analysis",
         json={
             "cv_text": (
                 "- Reduced manual review time by 60% using FastAPI.\n"
@@ -106,7 +106,7 @@ def test_analysis_endpoint_returns_bullet_issues() -> None:
 
 def test_analysis_endpoint_returns_ats_readiness_results() -> None:
     response = client.post(
-        "/analysis",
+        "/api/analysis",
         json={
             "cv_text": (
                 "Supipi Amarajeeva\n"
@@ -138,7 +138,7 @@ def test_analysis_endpoint_returns_ats_readiness_results() -> None:
 
 def test_analysis_combines_skill_and_role_alignment_scores() -> None:
     response = client.post(
-        "/analysis",
+        "/api/analysis",
         json={
             "cv_text": ("Full-Stack Developer with Python and React experience."),
             "job_description": (

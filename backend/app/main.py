@@ -25,11 +25,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(health_router)
-app.include_router(analysis_router)
-app.include_router(pdf_analysis_router)
-app.include_router(ai_tailoring.router)
-app.include_router(cv.router)
+app.include_router(health_router, prefix="/api")
+app.include_router(analysis_router, prefix="/api")
+app.include_router(pdf_analysis_router, prefix="/api")
+app.include_router(ai_tailoring.router, prefix="/api")
+app.include_router(cv.router, prefix="/api")
 
 
 @app.get("/")

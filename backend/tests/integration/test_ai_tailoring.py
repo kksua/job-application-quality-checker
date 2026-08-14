@@ -25,7 +25,7 @@ def test_tailoring_endpoint_returns_ai_suggestion(
     )
 
     response = client.post(
-        "/tailoring",
+        "/api/tailoring",
         json={
             "cv_text": (
                 "Software Engineering graduate with "
@@ -60,7 +60,7 @@ def test_tailoring_endpoint_handles_ai_failure(
     mocked_generate.side_effect = RuntimeError("OpenAI request failed.")
 
     response = client.post(
-        "/tailoring",
+        "/api/tailoring",
         json={
             "cv_text": (
                 "Software Engineering graduate with React, "
@@ -79,7 +79,7 @@ def test_tailoring_endpoint_handles_ai_failure(
 
 def test_tailoring_endpoint_rejects_short_cv() -> None:
     response = client.post(
-        "/tailoring",
+        "/api/tailoring",
         json={
             "cv_text": "React",
             "job_description": (
@@ -103,7 +103,7 @@ def test_bullet_rewrite_endpoint_returns_ai_suggestion(
     )
 
     response = client.post(
-        "/tailoring/bullet",
+        "/api/tailoring/bullet",
         json={
             "bullet": "Responsible for frontend tasks.",
             "cv_context": (

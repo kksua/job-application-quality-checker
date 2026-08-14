@@ -65,7 +65,7 @@ def test_cv_parse_endpoint_extracts_realistic_full_cv() -> None:
     """
 
     response = client.post(
-        "/cv/parse",
+        "/api/cv/parse",
         json={
             "cv_text": cv_text,
             "job_description": "Parse this realistic CV into structured sections.",

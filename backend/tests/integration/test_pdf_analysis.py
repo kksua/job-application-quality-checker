@@ -19,7 +19,7 @@ def create_blank_pdf() -> bytes:
 
 def test_pdf_analysis_rejects_non_pdf_file() -> None:
     response = client.post(
-        "/analysis/pdf",
+        "/api/analysis/pdf",
         files={
             "cv_file": (
                 "cv.txt",
@@ -38,7 +38,7 @@ def test_pdf_analysis_rejects_non_pdf_file() -> None:
 
 def test_pdf_analysis_rejects_pdf_without_readable_text() -> None:
     response = client.post(
-        "/analysis/pdf",
+        "/api/analysis/pdf",
         files={
             "cv_file": (
                 "cv.pdf",
@@ -57,7 +57,7 @@ def test_pdf_analysis_rejects_pdf_without_readable_text() -> None:
 
 def test_pdf_analysis_rejects_short_job_description() -> None:
     response = client.post(
-        "/analysis/pdf",
+        "/api/analysis/pdf",
         files={
             "cv_file": (
                 "cv.pdf",
