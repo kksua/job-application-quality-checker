@@ -1,5 +1,6 @@
-import { Fragment, useState, type ReactNode } from "react";
+import { Fragment, useRef, useState, type ReactNode } from "react";
 
+import { exportPreviewPdf } from "./cvExport";
 import type {
   AwardItem,
   CertificationItem,
@@ -893,6 +894,7 @@ export function CvPreview({ cv, onRewriteBullet }: CvPreviewProps) {
   const [editMode, setEditMode] = useState(false);
   const [activeRewrite, setActiveRewrite] =
     useState<ActiveBulletRewrite | null>(null);
+  const previewPagesRef = useRef<HTMLDivElement | null>(null);
   const contacts = contactItems(editableCv);
   const useSecondPage = shouldUseSecondPage(editableCv);
 
@@ -1074,6 +1076,7 @@ export function CvPreview({ cv, onRewriteBullet }: CvPreviewProps) {
   return (
     <section className="cv-preview-shell" aria-label="CV preview">
       <div
+        ref={previewPagesRef}
         className={`cv-preview-pages ${
           useSecondPage ? "cv-preview-pages-paged" : ""
         }`}
@@ -1198,6 +1201,17 @@ export function CvPreview({ cv, onRewriteBullet }: CvPreviewProps) {
           }}
         >
           {editMode ? "Save changes" : "Edit"}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            if (previewPagesRef.current) {
+              exportPreviewPdf(previewPagesRef.current);
+            }
+          }}
+        >
+          Export PDF
         </button>
       </div>
     </section>
