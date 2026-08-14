@@ -673,6 +673,57 @@ describe("App", () => {
     );
   });
 
+  // Checks that the CV preview can export the structured CV as a PDF.
+  test("exports the structured CV as a PDF", async () => {
+    const user = userEvent.setup();
+
+    mockedAnalyseTextApplication.mockResolvedValue(successfulAnalysis);
+
+    render(<App />);
+
+    await user.click(
+      screen.getByRole("button", {
+        name: /paste text/i,
+      }),
+    );
+
+    await user.type(
+      screen.getByRole("textbox", {
+        name: /cv text/i,
+      }),
+      "Software Engineering graduate with React, TypeScript, FastAPI and PostgreSQL experience.",
+    );
+
+    await user.type(
+      screen.getByRole("textbox", {
+        name: /job description/i,
+      }),
+      "We are hiring a Junior Full-Stack Developer with React, TypeScript and FastAPI experience.",
+    );
+
+    await user.click(
+      screen.getByRole("button", {
+        name: /analyse application/i,
+      }),
+    );
+
+    await screen.findByRole("region", {
+      name: /cv preview/i,
+    });
+
+    await user.click(
+      screen.getByRole("button", {
+        name: /export pdf/i,
+      }),
+    );
+
+    const exportFrame = document.querySelector("iframe");
+
+    expect(exportFrame?.contentDocument?.body.innerHTML).toContain(
+      "cv-preview-page",
+    );
+  });
+
   // Checks that requesting another version calls AI again and updates the output.
   test("regenerates AI tailoring suggestions", async () => {
     const user = userEvent.setup();
