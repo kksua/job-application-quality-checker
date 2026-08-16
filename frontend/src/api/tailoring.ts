@@ -18,7 +18,7 @@ export async function generateTailoringSuggestions({
   cvText,
   jobDescription,
 }: TailoringRequest): Promise<TailoringResponse> {
-  const response = await fetch(`${API_BASE_URL}/tailoring`, {
+  const response = await fetch(`${API_BASE_URL}/api/tailoring`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -45,7 +45,7 @@ export async function rewriteBullet({
   cvContext,
   jobDescription,
 }: BulletRewriteRequest): Promise<BulletRewriteResponse> {
-  const response = await fetch(`${API_BASE_URL}/tailoring/bullet`, {
+  const response = await fetch(`${API_BASE_URL}/api/tailoring/bullet`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

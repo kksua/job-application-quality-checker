@@ -34,7 +34,7 @@ export async function analyseTextApplication({
   cvText,
   jobDescription,
 }: TextAnalysisRequest): Promise<AnalysisResponse> {
-  const response = await fetch(`${API_BASE_URL}/analysis`, {
+  const response = await fetch(`${API_BASE_URL}/api/analysis`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -57,7 +57,7 @@ export async function analysePdfApplication(
   formData.append("cv_file", cvFile);
   formData.append("job_description", jobDescription);
 
-  const response = await fetch(`${API_BASE_URL}/analysis/pdf`, {
+  const response = await fetch(`${API_BASE_URL}/api/analysis/pdf`, {
     method: "POST",
     body: formData,
   });

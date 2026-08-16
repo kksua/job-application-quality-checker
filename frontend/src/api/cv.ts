@@ -147,7 +147,7 @@ export async function parseCv({
   cvText,
   jobDescription,
 }: ParseCvRequest): Promise<StructuredCv> {
-  const response = await fetch(`${API_BASE_URL}/cv/parse`, {
+  const response = await fetch(`${API_BASE_URL}/api/cv/parse`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
