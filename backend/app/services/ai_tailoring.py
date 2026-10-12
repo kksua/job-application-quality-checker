@@ -344,14 +344,8 @@ def _is_cv_conversation_request(
         _content_terms(*_string_values(structured_cv), job_description) & words
     )
 
-    if (
-        has_cv_context
-        or mentions_cv_content
-        or (has_edit_intent and has_contextual_reference)
-    ):
-        return True
-
-    return False
+    return bool(has_cv_context or mentions_cv_content or has_edit_intent and
+                has_contextual_reference)
 
 
 def generate_tailoring_suggestion(
