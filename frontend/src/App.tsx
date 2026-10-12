@@ -3,6 +3,7 @@ import { useRef, useState } from "react";
 import { analysePdfApplication, analyseTextApplication } from "./api/analysis";
 import { parseCv } from "./api/cv";
 import { generateTailoringSuggestions, rewriteBullet } from "./api/tailoring";
+import { CvConversation } from "./CvConversation";
 import { CvPreview } from "./CvPreview";
 import type { AnalysisResponse, TailoringResponse } from "./types/analysis";
 import type { StructuredCv } from "./types/cv";
@@ -23,6 +24,8 @@ function App() {
   );
 
   const [structuredCv, setStructuredCv] = useState<StructuredCv | null>(null);
+  const [editorControlsHost, setEditorControlsHost] =
+    useState<HTMLDivElement | null>(null);
 
   const [originalStructuredCv, setOriginalStructuredCv] =
     useState<StructuredCv | null>(null);
@@ -660,19 +663,28 @@ function App() {
           )}
 
           {structuredCv ? (
-            <CvPreview
-              cv={structuredCv}
-              key={`${structuredCv.headline ?? ""}:${structuredCv.summary ?? ""}`}
-              onRewriteBullet={async ({ bullet, cvContext }) => {
-                const result = await rewriteBullet({
-                  bullet,
-                  cvContext,
-                  jobDescription,
-                });
+            <div className="cv-conversation-workspace">
+              <CvConversation
+                cv={structuredCv}
+                jobDescription={jobDescription}
+                onCvChange={setStructuredCv}
+                onControlsHostChange={setEditorControlsHost}
+              />
+              <CvPreview
+                cv={structuredCv}
+                onCvChange={setStructuredCv}
+                controlsHost={editorControlsHost}
+                onRewriteBullet={async ({ bullet, cvContext }) => {
+                  const result = await rewriteBullet({
+                    bullet,
+                    cvContext,
+                    jobDescription,
+                  });
 
-                return result.rewrittenBullet;
-              }}
-            />
+                  return result.rewrittenBullet;
+                }}
+              />
+            </div>
           ) : (
             <section
               className="cv-preview-empty"

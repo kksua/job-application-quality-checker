@@ -84,3 +84,25 @@ class BulletRewriteRequest(BaseModel):
 
 class BulletRewriteResponse(BaseModel):
     rewritten_bullet: str
+
+
+class CvConversationMessage(BaseModel):
+    role: Literal["user", "assistant"]
+    content: str = Field(
+        min_length=1,
+        description="A message in the CV editing conversation.",
+    )
+
+
+class CvConversationRequest(BaseModel):
+    structured_cv: dict[str, object]
+    job_description: str = Field(
+        min_length=20,
+        description="The target job description.",
+    )
+    messages: list[CvConversationMessage] = Field(min_length=1)
+
+
+class CvConversationResponse(BaseModel):
+    reply: str
+    structured_cv: dict[str, object]

@@ -1,4 +1,5 @@
 import type { BulletRewriteResponse, TailoringResponse } from "../types/analysis";
+import type { StructuredCv } from "../types/cv";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8000";
@@ -12,6 +13,22 @@ interface BulletRewriteRequest {
   bullet: string;
   cvContext: string;
   jobDescription: string;
+}
+
+export interface CvConversationMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
+interface CvConversationRequest {
+  cv: StructuredCv;
+  jobDescription: string;
+  messages: CvConversationMessage[];
+}
+
+interface CvConversationResponse {
+  reply: string;
+  structured_cv: StructuredCv;
 }
 
 export async function generateTailoringSuggestions({
@@ -69,5 +86,41 @@ export async function rewriteBullet({
 
   return {
     rewrittenBullet: data.rewritten_bullet,
+  };
+}
+
+export async function converseAboutCv({
+  cv,
+  jobDescription,
+  messages,
+}: CvConversationRequest): Promise<{
+  reply: string;
+  cv: StructuredCv;
+}> {
+  const response = await fetch(`${API_BASE_URL}/api/tailoring/conversation`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      structured_cv: cv,
+      job_description: jobDescription,
+      messages,
+    }),
+  });
+
+  if (!response.ok) {
+    const body = await response.json().catch(() => null);
+
+    throw new Error(
+      body?.detail ?? "The CV could not be updated from this conversation.",
+    );
+  }
+
+  const data = (await response.json()) as CvConversationResponse;
+
+  return {
+    reply: data.reply,
+    cv: data.structured_cv,
   };
 }

@@ -26,8 +26,10 @@ body {
 }
 
 .cv-preview-page {
+  position: relative;
   width: 210mm;
-  min-height: 297mm;
+  height: 297mm;
+  min-height: 0;
   margin: 0;
   padding: 15.35mm 16.95mm;
   color: #1f2430;
@@ -38,6 +40,7 @@ body {
   line-height: 1.48;
   page-break-after: always;
   break-after: page;
+  overflow: hidden;
   overflow-wrap: anywhere;
   word-break: normal;
 }
@@ -47,8 +50,12 @@ body {
   break-after: auto;
 }
 
-.cv-preview-page-continuation {
-  padding-top: 14.29mm;
+.cv-preview-page-number {
+  position: absolute;
+  right: 6mm;
+  bottom: 4mm;
+  color: #687082;
+  font: 9pt Arial, Helvetica, sans-serif;
 }
 
 .cv-preview-header {
@@ -117,6 +124,23 @@ body {
   display: grid;
   grid-template-columns: minmax(0, 1.48fr) minmax(210px, 0.72fr);
   gap: 42px;
+}
+
+.cv-preview-main,
+.cv-preview-sidebar {
+  display: grid;
+  align-content: start;
+  gap: 0;
+  min-width: 0;
+}
+
+.cv-preview-sidebar {
+  padding-left: 8%;
+  border-left: 1px solid #d2d2d2;
+}
+
+.cv-export-pages[data-template="minimal"] .cv-preview-columns {
+  display: grid;
 }
 
 .cv-preview-entry-list {
@@ -261,26 +285,301 @@ body {
   gap: 30px;
 }
 
+.cv-export-pages[data-template="modern"] .cv-preview-page {
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.cv-export-pages[data-template="modern"] .cv-preview-header {
+  border-bottom-color: #28779a;
+}
+
+.cv-export-pages[data-template="modern"] .cv-preview-section h3 {
+  color: #246a88;
+  border-bottom: 2px solid #78b6c7;
+}
+
+.cv-export-pages[data-template="minimal"] .cv-preview-header {
+  border-bottom: 1px solid #a7a7a7;
+}
+
+.cv-export-pages[data-template="minimal"] .cv-preview-header h2 {
+  font-family: Arial, Helvetica, sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.cv-export-pages[data-template="minimal"] .cv-preview-section h3 {
+  color: #292929;
+  border-bottom: 0;
+  letter-spacing: 0.1em;
+}
+
+.cv-export-pages[data-template="executive"] .cv-preview-page {
+  background: #fcfbf8;
+}
+
+.cv-export-pages[data-template="executive"] .cv-preview-header {
+  padding: 22px;
+  color: #fff;
+  background: #24334c;
+  border: 0;
+}
+
+.cv-export-pages[data-template="executive"] .cv-preview-header h2,
+.cv-export-pages[data-template="executive"] .cv-preview-header p,
+.cv-export-pages[data-template="executive"] .cv-preview-header ul {
+  color: #fff;
+}
+
+.cv-export-pages[data-template="executive"] .cv-preview-section h3 {
+  color: #24334c;
+  border-bottom: 2px solid #c8a86b;
+}
+
+.cv-export-pages[data-template="creative"] .cv-preview-header {
+  padding-left: 22px;
+  border-bottom: 0;
+  border-left: 6px solid #9360a7;
+}
+
+.cv-export-pages[data-template="creative"] .cv-preview-header h2,
+.cv-export-pages[data-template="creative"] .cv-preview-section h3 {
+  color: #75468b;
+}
+
+.cv-export-pages[data-template="creative"] .cv-preview-section h3 {
+  border-bottom-color: #d4b8de;
+}
+
+.cv-export-pages[data-template="compact"] .cv-preview-page {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 0.86rem;
+  line-height: 1.35;
+}
+
+.cv-export-pages[data-template="compact"] .cv-preview-header {
+  gap: 22px;
+  padding-bottom: 16px;
+  border-bottom-color: #398a79;
+}
+
+.cv-export-pages[data-template="compact"] .cv-preview-section {
+  margin-top: 16px;
+}
+
+.cv-export-pages[data-template="compact"] .cv-preview-section h3 {
+  color: #276b5e;
+  margin-bottom: 8px;
+  padding-bottom: 4px;
+}
+
+.cv-export-pages[data-template="compact"].cv-preview-pages-dense
+  .cv-preview-page {
+  padding: 10mm 12mm;
+  font-size: 0.78rem;
+  line-height: 1.25;
+}
+
+.cv-preview-columns,
+.cv-preview-columns * {
+  line-height: var(--cv-line-spacing, 1.4) !important;
+}
+
+.cv-layout-section {
+  min-width: 0;
+}
+
+.cv-export-pages[data-template="classic"] .cv-preview-header {
+  grid-template-columns: 1fr;
+}
+
+.cv-export-pages[data-template="classic"] .cv-preview-header ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+}
+
+.cv-export-pages[data-template="modern"] .cv-preview-page {
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.cv-export-pages[data-template="modern"] .cv-preview-header {
+  grid-template-columns: 1fr;
+  gap: 12px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid #777;
+}
+
+.cv-export-pages[data-template="modern"] .cv-preview-header ul,
+.cv-export-pages[data-template="creative"] .cv-preview-header ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+}
+
+.cv-export-pages[data-template="modern"] .cv-preview-sidebar {
+  padding: 10px 0 10px 12px;
+  border-left: 2px solid #b9b9b9;
+}
+
+.cv-export-pages[data-template="minimal"] .cv-preview-columns {
+  display: grid;
+}
+
+.cv-export-pages[data-template="minimal"] .cv-layout-section {
+  break-inside: avoid;
+}
+
+.cv-export-pages[data-template="minimal"] .cv-preview-section h3 {
+  padding: 0 0 5px;
+  border-bottom: 1px solid #555;
+}
+
+.cv-export-pages[data-template="executive"] .cv-preview-header {
+  grid-template-columns: minmax(0, 1fr) minmax(150px, 0.5fr);
+  padding: 0 0 14px;
+  color: #1f2430;
+  background: #fff;
+  border-bottom: 3px double #555;
+}
+
+.cv-export-pages[data-template="executive"] .cv-preview-header h2 {
+  color: #111522;
+  font-variant: small-caps;
+}
+
+.cv-export-pages[data-template="executive"] .cv-preview-header p,
+.cv-export-pages[data-template="executive"] .cv-preview-header ul {
+  color: #4b5263;
+}
+
+.cv-export-pages[data-template="executive"] .cv-preview-sidebar {
+  padding: 10px 10px 10px 0;
+  border-left: 0;
+  border-top: 1px solid #888;
+}
+
+.cv-export-pages[data-template="creative"] .cv-preview-header {
+  display: block;
+  padding: 0 0 18px;
+}
+
+.cv-export-pages[data-template="creative"] .cv-preview-header ul {
+  margin-top: 12px;
+}
+
+.cv-export-pages[data-template="creative"] .cv-preview-section h3 {
+  padding: 5px 8px;
+  color: #111522;
+  border: 1px solid #555;
+}
+
+.cv-export-pages[data-template="compact"] .cv-preview-header {
+  grid-template-columns: minmax(0, 1fr) minmax(130px, 0.55fr);
+  gap: 18px;
+  padding-bottom: 12px;
+  border-bottom-color: #777;
+}
+
+.cv-export-pages[data-template="compact"] .cv-preview-columns {
+  column-gap: 4%;
+}
+
+.cv-export-pages[data-template="compact"] .cv-preview-sidebar {
+  padding-left: 6%;
+  border-left: 1px solid #aaa;
+}
+
+.cv-export-pages[data-template] .cv-preview-header h2,
+.cv-export-pages[data-template] .cv-preview-section h3 {
+  color: #111522;
+}
+
+.cv-export-pages[data-template="modern"] .cv-preview-header,
+.cv-export-pages[data-template="modern"] .cv-preview-section h3 {
+  border-color: #777;
+}
+
+.cv-export-pages[data-template] .cv-preview-header h2,
+.cv-export-pages[data-template] .cv-preview-section h3 {
+  color: #111522;
+}
+
+.cv-layout-section.wide {
+  padding: 8px 10px;
+  border: 1px solid #d2d2d2;
+}
+
 .cv-bullet-ai-button,
-.cv-bullet-rewrite-panel {
+.cv-bullet-rewrite-panel,
+.cv-rich-text-toolbar {
   display: none !important;
+}
+
+.cv-rich-text-editor {
+  display: contents;
 }
 `;
 
 // Clones only the printable CV pages and strips edit-only controls before export.
 function cleanPreviewElement(previewElement: HTMLElement): HTMLElement {
   const clone = previewElement.cloneNode(true) as HTMLElement;
+  const originalTextareas =
+    previewElement.querySelectorAll<HTMLTextAreaElement>(
+      "textarea.cv-preview-editable",
+    );
+  const clonedTextareas =
+    clone.querySelectorAll<HTMLTextAreaElement>(
+      "textarea.cv-preview-editable",
+    );
 
   clone.querySelectorAll(".cv-bullet-ai-button, .cv-bullet-rewrite-panel").forEach(
     (element) => element.remove(),
   );
+  clonedTextareas.forEach((textarea, index) => {
+      const text = document.createElement("span");
+      text.className = textarea.className;
+      const html = originalTextareas[index]?.dataset.exportHtml;
+      if (html && /<[a-z][\s\S]*>/i.test(html)) {
+        text.innerHTML = html;
+      } else {
+        const value =
+          originalTextareas[index]?.value ?? textarea.value;
+        const linkPattern =
+          /(https?:\/\/[^\s|]+|www\.[^\s|]+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})/gi;
+        let lastIndex = 0;
+        value.replace(linkPattern, (match, _capture: string, offset: number) => {
+          text.append(document.createTextNode(value.slice(lastIndex, offset)));
+          const anchor = document.createElement("a");
+          anchor.href = match.includes("@")
+            ? `mailto:${match}`
+            : match.toLowerCase().startsWith("www.")
+              ? `https://${match}`
+              : match;
+          anchor.textContent = match;
+          anchor.rel = "noreferrer";
+          anchor.target = "_blank";
+          text.append(anchor);
+          lastIndex = offset + match.length;
+          return match;
+        });
+        text.append(document.createTextNode(value.slice(lastIndex)));
+      }
+      textarea.replaceWith(text);
+  });
   clone.querySelectorAll("[contenteditable]").forEach((element) => {
     element.removeAttribute("contenteditable");
     element.removeAttribute("suppresscontenteditablewarning");
   });
-  clone.className = previewElement.classList.contains("cv-preview-pages-dense")
-    ? "cv-export-pages cv-preview-pages-dense"
-    : "cv-export-pages";
+  clone.className = [
+    "cv-export-pages",
+    previewElement.classList.contains("cv-preview-pages-dense")
+      ? "cv-preview-pages-dense"
+      : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+  clone.dataset.template = previewElement.dataset.template ?? "classic";
 
   return clone;
 }

@@ -47,9 +47,11 @@ Users can paste or upload a CV, analyse it against a target role, review ATS rea
 - Weighted job-match score 
 - ATS readiness analysis
 - AI-generated job-specific headline and summary
+- Conversational AI CV edit suggestions require explicit approval and update a one-page live preview for pasted CV text
 - AI bullet rewriting for experience and projects
-- Editable CV sections
-- PDF CV export
+- Text-area editing for CV sections
+- Six monochrome A4 CV templates with natural multi-page layout, section ordering, rename/delete controls, sidebar placement, rich-text formatting and undo in the scrollable Edit panel below the chat
+- PDF CV export that retains the selected template and layout settings
 
 ---
 
@@ -147,6 +149,3 @@ npm run test:run
 - Multilingual CV tailoring
 - Before vs after match-score comparison
 - User accounts
-
-
-

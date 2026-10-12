@@ -3,11 +3,14 @@ from fastapi import APIRouter, HTTPException
 from app.schemas.analysis import (
     BulletRewriteRequest,
     BulletRewriteResponse,
+    CvConversationRequest,
+    CvConversationResponse,
     TailoringRequest,
     TailoringResponse,
 )
 from app.services.ai_tailoring import (
     generate_bullet_rewrite,
+    generate_cv_conversation_response,
     generate_tailoring_suggestion,
 )
 
@@ -62,3 +65,30 @@ def rewrite_bullet(
         ) from exc
 
     return BulletRewriteResponse(rewritten_bullet=suggestion.rewritten_bullet)
+
+
+@router.post(
+    "/tailoring/conversation",
+    response_model=CvConversationResponse,
+)
+def edit_cv_in_conversation(
+    request: CvConversationRequest,
+) -> CvConversationResponse:
+    try:
+        suggestion = generate_cv_conversation_response(
+            structured_cv=request.structured_cv,
+            job_description=request.job_description,
+            messages=[message.model_dump() for message in request.messages],
+        )
+    except Exception as exc:
+        print(f"AI CV conversation error: {type(exc).__name__}: {exc}")
+
+        raise HTTPException(
+            status_code=502,
+            detail="The CV could not be updated from this conversation.",
+        ) from exc
+
+    return CvConversationResponse(
+        reply=suggestion.reply,
+        structured_cv=suggestion.structured_cv,
+    )
